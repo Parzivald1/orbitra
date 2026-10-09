@@ -1,0 +1,7 @@
+# Déploiement en un clic sur Render (offre gratuite) : https://render.com
+services:
+  - type: web
+    name: orbitra
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
