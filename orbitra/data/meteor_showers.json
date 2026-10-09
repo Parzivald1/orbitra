@@ -1,0 +1,15 @@
+[
+  {"code": "QUA", "name": "Quadrantides", "start": "12-28", "peak": "01-03", "end": "01-12", "zhr": 80, "speed_kms": 41, "radiant": "Bouvier (α 230°, δ +49°)", "parent": "2003 EH1", "parent_sstr": "196256"},
+  {"code": "LYR", "name": "Lyrides", "start": "04-14", "peak": "04-22", "end": "04-30", "zhr": 18, "speed_kms": 49, "radiant": "Lyre (α 271°, δ +34°)", "parent": "C/1861 G1 (Thatcher)", "parent_sstr": null},
+  {"code": "ETA", "name": "Êta Aquarides", "start": "04-19", "peak": "05-06", "end": "05-28", "zhr": 50, "speed_kms": 66, "radiant": "Verseau (α 338°, δ −1°)", "parent": "1P/Halley", "parent_sstr": "1P"},
+  {"code": "SDA", "name": "Delta Aquarides du Sud", "start": "07-12", "peak": "07-30", "end": "08-23", "zhr": 25, "speed_kms": 41, "radiant": "Verseau (α 340°, δ −16°)", "parent": "96P/Machholz (probable)", "parent_sstr": null},
+  {"code": "CAP", "name": "Alpha Capricornides", "start": "07-03", "peak": "07-30", "end": "08-15", "zhr": 5, "speed_kms": 23, "radiant": "Capricorne (α 307°, δ −10°)", "parent": "169P/NEAT", "parent_sstr": null},
+  {"code": "PER", "name": "Perséides", "start": "07-17", "peak": "08-12", "end": "08-24", "zhr": 100, "speed_kms": 59, "radiant": "Persée (α 48°, δ +58°)", "parent": "109P/Swift-Tuttle", "parent_sstr": "109P"},
+  {"code": "DRA", "name": "Draconides", "start": "10-06", "peak": "10-08", "end": "10-10", "zhr": 10, "speed_kms": 20, "radiant": "Dragon (α 262°, δ +54°)", "parent": "21P/Giacobini-Zinner", "parent_sstr": "21P"},
+  {"code": "STA", "name": "Taurides du Sud", "start": "09-10", "peak": "10-10", "end": "11-20", "zhr": 5, "speed_kms": 27, "radiant": "Taureau (α 32°, δ +9°)", "parent": "2P/Encke", "parent_sstr": "2P"},
+  {"code": "ORI", "name": "Orionides", "start": "10-02", "peak": "10-21", "end": "11-07", "zhr": 20, "speed_kms": 66, "radiant": "Orion (α 95°, δ +16°)", "parent": "1P/Halley", "parent_sstr": "1P"},
+  {"code": "NTA", "name": "Taurides du Nord", "start": "10-20", "peak": "11-12", "end": "12-10", "zhr": 5, "speed_kms": 29, "radiant": "Taureau (α 58°, δ +22°)", "parent": "2P/Encke", "parent_sstr": "2P"},
+  {"code": "LEO", "name": "Léonides", "start": "11-06", "peak": "11-17", "end": "11-30", "zhr": 15, "speed_kms": 71, "radiant": "Lion (α 152°, δ +22°)", "parent": "55P/Tempel-Tuttle", "parent_sstr": "55P"},
+  {"code": "GEM", "name": "Géminides", "start": "12-04", "peak": "12-14", "end": "12-20", "zhr": 150, "speed_kms": 35, "radiant": "Gémeaux (α 112°, δ +33°)", "parent": "(3200) Phaéton", "parent_sstr": "3200"},
+  {"code": "URS", "name": "Ursides", "start": "12-17", "peak": "12-22", "end": "12-26", "zhr": 10, "speed_kms": 33, "radiant": "Petite Ourse (α 217°, δ +76°)", "parent": "8P/Tuttle", "parent_sstr": "8P"}
+]
