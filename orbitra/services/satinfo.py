@@ -17,7 +17,7 @@ from ..cache import ttl_cache
 
 SATCAT_URL = "https://celestrak.org/satcat/records.php"
 WIKIDATA_SPARQL = "https://query.wikidata.org/sparql"
-WIKIPEDIA_SUMMARY = "https://fr.wikipedia.org/api/rest_v1/page/summary/"
+SUPPORTED_LANGS = ("fr", "en")
 
 OBJECT_TYPES = {"PAY": "Satellite (charge utile)", "R/B": "Étage de fusée", "DEB": "Débris", "UNK": "Inconnu"}
 
@@ -186,8 +186,8 @@ async def satcat(norad_id: str) -> dict | None:
 
 
 @ttl_cache(7 * 24 * 3600)
-async def wikidata(norad_id: str) -> dict | None:
-    if not norad_id.isdigit():  # protège la requête SPARQL (le numéro est injecté dedans)
+async def wikidata(norad_id: str, lang: str = "fr") -> dict | None:
+    if not norad_id.isdigit() or lang not in SUPPORTED_LANGS:  # protège la requête SPARQL
         return None
     query = f"""
     SELECT ?item ?itemLabel ?itemDescription ?article ?launch ?end ?decay ?operatorLabel ?useLabel ?image WHERE {{
@@ -198,8 +198,8 @@ async def wikidata(norad_id: str) -> dict | None:
       OPTIONAL {{ ?item wdt:P137 ?operator }}
       OPTIONAL {{ ?item wdt:P366 ?use }}
       OPTIONAL {{ ?item wdt:P18 ?image }}
-      OPTIONAL {{ ?article schema:about ?item; schema:isPartOf <https://fr.wikipedia.org/> }}
-      SERVICE wikibase:label {{ bd:serviceParam wikibase:language "fr,en". }}
+      OPTIONAL {{ ?article schema:about ?item; schema:isPartOf <https://{lang}.wikipedia.org/> }}
+      SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{lang},en". }}
     }} LIMIT 20"""
     r = await net.client().get(WIKIDATA_SPARQL, params={"query": query},
                                headers={"Accept": "application/sparql-results+json"})
@@ -232,8 +232,12 @@ async def wikidata(norad_id: str) -> dict | None:
 
 @ttl_cache(7 * 24 * 3600)
 async def wikipedia_summary(article_url: str) -> dict | None:
+    # l'URL vient de Wikidata : on n'accepte que les Wikipédia des langues prévues
+    host = article_url.split("/")[2] if article_url.count("/") >= 3 else ""
+    if host not in {f"{l}.wikipedia.org" for l in SUPPORTED_LANGS}:
+        return None
     title = unquote(article_url.rsplit("/wiki/", 1)[-1])
-    data = await net.get_json(WIKIPEDIA_SUMMARY + quote(title, safe=""))
+    data = await net.get_json(f"https://{host}/api/rest_v1/page/summary/" + quote(title, safe=""))
     return {
         "title": data.get("title"),
         "extract": data.get("extract"),
@@ -249,8 +253,9 @@ async def _quiet(coro):
         return None
 
 
-async def info(norad_id: str, name: str) -> dict:
-    cat, wd = await asyncio.gather(_quiet(satcat(norad_id)), _quiet(wikidata(norad_id)))
+async def info(norad_id: str, name: str, lang: str = "fr") -> dict:
+    lang = lang if lang in SUPPORTED_LANGS else "en"
+    cat, wd = await asyncio.gather(_quiet(satcat(norad_id)), _quiet(wikidata(norad_id, lang)))
     wiki = await _quiet(wikipedia_summary(wd["article"])) if wd and wd.get("article") else None
 
     obj_type = cat.get("OBJECT_TYPE") if cat else None
@@ -276,5 +281,5 @@ async def info(norad_id: str, name: str) -> dict:
         "family": family(name, obj_type),
         "wikidata": wd,
         "wikipedia": wiki,
-        "sources": [s for s, ok in (("CelesTrak SATCAT", cat), ("Wikidata", wd), ("Wikipédia", wiki)) if ok],
+        "sources": [s for s, ok in (("CelesTrak SATCAT", cat), ("Wikidata", wd), ("Wikipedia" if lang == "en" else "Wikipédia", wiki)) if ok],
     }

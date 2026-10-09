@@ -69,12 +69,12 @@ async def get_satellites():
 
 
 @app.get("/api/satellites/{norad_id}/info")
-async def get_satellite_info(norad_id: str):
+async def get_satellite_info(norad_id: str, lang: str = Query("fr", pattern="^[a-z]{2}$")):
     """Fiche complète : mission, lancement, statut, ce qu'il récolte, fin de mission."""
     sat = await satellites.get_tle(norad_id)
     if not sat:
         raise HTTPException(404, f"Satellite {norad_id} introuvable")
-    return await satinfo.info(norad_id, sat["name"])
+    return await satinfo.info(norad_id, sat["name"], lang)
 
 
 @app.get("/api/satellites/{norad_id}/osint")

@@ -1,7 +1,9 @@
 // Petits outils partagés : appels API, dates, comptes à rebours, échappement HTML.
+import { lang, locale } from "./i18n.js";
 
 export async function api(path, params = {}) {
   const url = new URL(`/api/${path}`, location.origin);
+  url.searchParams.set("lang", lang); // le serveur choisit la langue de Wikipédia, etc.
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== null) url.searchParams.set(k, v);
   const res = await fetch(url);
   if (!res.ok) {
@@ -25,10 +27,10 @@ export function safeUrl(url) {
   } catch { return "#"; }
 }
 
-export const fmtDateTime = (iso) => iso ? new Date(iso).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
-export const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "—";
-export const fmtTime = (iso) => iso ? new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—";
-export const fmtNum = (n, d = 0) => n === null || n === undefined ? "—" : Number(n).toLocaleString("fr-FR", { maximumFractionDigits: d });
+export const fmtDateTime = (iso) => iso ? new Date(iso).toLocaleString(locale, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+export const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" }) : "—";
+export const fmtTime = (iso) => iso ? new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : "—";
+export const fmtNum = (n, d = 0) => n === null || n === undefined ? "—" : Number(n).toLocaleString(locale, { maximumFractionDigits: d });
 
 export function countdownText(targetMs) {
   let ms = targetMs - Date.now();
@@ -38,7 +40,8 @@ export function countdownText(targetMs) {
   const m = Math.floor(ms / 60000); ms -= m * 60000;
   const s = Math.floor(ms / 1000);
   const pad = (x) => String(x).padStart(2, "0");
-  return `${d > 0 ? `J-${d} ` : ""}${pad(h)}:${pad(m)}:${pad(s)}`;
+  const days = d > 0 ? (lang === "fr" ? `J-${d} ` : `${d} d `) : ""; // « J-12 » est une notation française
+  return `${days}${pad(h)}:${pad(m)}:${pad(s)}`;
 }
 
 // Un seul minuteur pour tous les éléments <span data-countdown="ISO">

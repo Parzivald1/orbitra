@@ -3,6 +3,7 @@
 import { api, esc, safeUrl, fmtNum, fmtDate, fmtDateTime, fmtTime, loading, failed } from "./util.js";
 import { icons } from "./icons.js";
 import { MODELS, CAMERAS, markerIcon } from "./satmedia.js";
+import { t } from "./i18n.js";
 
 const CATS = {
   station: { label: "Stations spatiales", color: "#ffd166", px: 15 },
@@ -655,7 +656,7 @@ async function readAtmosphere(screenPos, lat, lon) {
     v = await api("atmosphere/value", { key: l.key, date: document.getElementById("atmo-date").value, lat: lat.toFixed(4), lon: lon.toFixed(4) });
   } catch (err) { box.innerHTML = `<div class="atmo-value error">${esc(err.message)}</div>`; return; }
   const where = `${fmtNum(lat, 2)}°, ${fmtNum(lon, 2)}°`;
-  const text = v.found ? `${fmtValue(v.value)} ${v.units === "sans unité" ? "" : v.units}`.trim() : "pas de mesure";
+  const text = v.found ? `${fmtValue(v.value)} ${v.units === "sans unité" ? "" : t(v.units)}`.trim() : t("pas de mesure");
   if (atmo.pin) viewer.entities.remove(atmo.pin);
   atmo.pin = viewer.entities.add({
     position: Cesium.Cartesian3.fromDegrees(lon, lat),
@@ -761,6 +762,6 @@ function placeObserver(loc) {
   observerEntity = viewer.entities.add({
     position: Cesium.Cartesian3.fromDegrees(loc.lon, loc.lat),
     point: { pixelSize: 9, color: Cesium.Color.fromCssColorString("#6ea8ff"), outlineColor: Cesium.Color.WHITE, outlineWidth: 2, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND },
-    label: { text: "Vous", font: "12px Space Grotesk, sans-serif", pixelOffset: new Cesium.Cartesian2(0, -16), fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE },
+    label: { text: t("Vous"), font: "12px Space Grotesk, sans-serif", pixelOffset: new Cesium.Cartesian2(0, -16), fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE },
   });
 }

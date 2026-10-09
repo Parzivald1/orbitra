@@ -1,7 +1,15 @@
 // Point d'entrée : onglets, position de l'observateur, horloge.
 import { esc } from "./util.js";
+import { lang, LANGUAGES, loadLanguage, startAutoTranslate, setLanguage, t } from "./i18n.js";
 
-const DEFAULT_LOC = { lat: 48.8361, lon: 2.3364, alt: 400, name: "Paris" };
+await loadLanguage();
+startAutoTranslate();
+
+const langSelect = document.getElementById("lang");
+langSelect.innerHTML = Object.entries(LANGUAGES).map(([c, n]) => `<option value="${c}" ${c === lang ? "selected" : ""}>${n}</option>`).join("");
+langSelect.onchange = () => setLanguage(langSelect.value);
+
+const DEFAULT_LOC = { lat: 48.8361, lon: 2.3364, alt: 65, name: "Paris" };
 
 export const state = {
   location: loadLocation(),
@@ -24,7 +32,7 @@ function setLocation(loc) {
 
 document.getElementById("loc-name").textContent = state.location.name;
 document.getElementById("locate").addEventListener("click", () => {
-  if (!navigator.geolocation) return alert("La géolocalisation n'est pas disponible sur cet appareil.");
+  if (!navigator.geolocation) return alert(t("La géolocalisation n'est pas disponible sur cet appareil."));
   navigator.geolocation.getCurrentPosition(
     (pos) => setLocation({
       lat: +pos.coords.latitude.toFixed(4),
