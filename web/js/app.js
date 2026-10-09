@@ -46,6 +46,7 @@ const modules = {
   orbit: () => import("./orbit.js"),
   solar: () => import("./solar.js"),
   sky: () => import("./sky.js"),
+  cameras: () => import("./cameras.js"),
   events: () => import("./events.js"),
   launches: () => import("./launches.js"),
   discoveries: () => import("./discoveries.js"),
@@ -64,6 +65,8 @@ async function show(view) {
     mod.onShow?.(state);
   }
 }
+
+export function openView(view) { return show(view); }
 
 document.getElementById("tabs").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-view]");

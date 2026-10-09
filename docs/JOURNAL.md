@@ -95,3 +95,76 @@ Leçon : toujours vérifier à la source.
 ### Prochaine étape
 
 Les cartes de pollution mesurées par Sentinel-5P (NO₂, CH₄, CO) affichées sur le globe : l'idée de départ du projet.
+
+---
+
+## 9 octobre 2026 (suite) : v0.2, Terre HD, vrais satellites en 3D, vraies caméras
+
+### Ce que j'ai demandé
+
+- Une Terre vraiment belle, pas pixelisée, où on peut zoomer jusqu'aux rues comme sur Maps
+- Des satellites plus lisibles, et le **vrai** satellite quand on s'approche
+- Accéder à la caméra des satellites, mais **seulement de vraies images, pas de simulation**
+- Des caméras qui filment l'espace, et une galerie qui garde les clichés où on voit vraiment bien une planète ou la Lune
+- Une caméra embarquée de l'ISS avec les photos des astronautes, et un « film » de son trajet fait de vraies photos
+
+### Ce qui a été fait
+
+| Demande | Solution |
+|---|---|
+| Terre HD | Imagerie satellite Esri (jusqu'au niveau 19 : rues et toits) + rendu à la vraie résolution de l'écran (Retina) + anticrénelage |
+| Satellites lisibles | Points lumineux doux par catégorie ; en vue rapprochée, tous les autres disparaissent |
+| Le vrai satellite | Modèles 3D officiels de la NASA pour 22 satellites (ISS, Hubble, Terra, Aqua, Landsat, GOES…) ; sinon sa vraie photo |
+| Caméras des satellites | Direct vidéo de l'ISS ; images du jour de Terra, Aqua, Suomi NPP, NOAA-20/21 (NASA GIBS) ; photo de la Terre entière toutes les 10 min (GOES-18/19) |
+| Caméras de l'espace | Soleil (SDO, SOHO), Terre depuis 1,5 million de km (DSCOVR/EPIC), avec l'heure réelle de chaque cliché |
+| Galerie | Enregistrement automatique, avec une **analyse d'image** qui vérifie que l'astre est seul, entier et net |
+| Caméra embarquée ISS | Dernières photos de l'équipage ; film du trajet à partir des rafales de photos (nécessite une clé NASA gratuite) |
+
+### Ce qui n'a PAS marché, et les correctifs
+
+**10. La Terre était floue et pixelisée**
+Deux causes : la texture de base de Cesium (NaturalEarthII) est une vignette basse résolution, et sur un écran
+Retina Cesium dessine par défaut à **demi-résolution**.
+→ Imagerie Esri haute résolution + `useBrowserRecommendedResolution: false` + `msaaSamples: 4`.
+
+**11. La caméra partait toute seule au-dessus de la France**
+`setPov(false)` recentrait la caméra à chaque sélection, même si on n'était pas en vue satellite.
+→ On ne recentre que si on sortait vraiment de cette vue.
+
+**12. Les modèles 3D étaient tout noirs, puis tout blancs**
+Noirs : le rendu physique de Cesium n'a pas de lumière ambiante dans l'espace. Correctif : un petit *shader*
+(programme pour la carte graphique) qui éclaire le modèle avec le Soleil plus une lumière ambiante.
+Blancs : le modèle de l'ISS publié par la NASA n'a **aucune couleur** (19 matériaux, tous gris à 40 %).
+J'ai identifié les pièces par leur géométrie (les panneaux solaires sont le grand élément plat de 30 × 45 m
+avec très peu de sommets) et écrit `tools/recolor_glb.py`, qui réécrit uniquement les couleurs dans le fichier `.glb`.
+
+**13. L'icône jaune restait collée sur l'ISS en vue rapprochée**
+Les autres modules de l'ISS (Nauka…) sont catalogués à part et restaient affichés. Et au démarrage, leurs
+positions n'étaient pas encore calculées quand on cherchait les voisins de l'ISS.
+→ On calcule leurs positions au moment de la sélection, et ils disparaissent en vue rapprochée.
+
+**14. Des bandes sur la Terre en suivant l'ISS**
+Diagnostic en désactivant les effets un par un : c'est l'éclairage jour/nuit de Cesium près du terminateur.
+→ L'effet jour/nuit s'efface sous 6 500 km d'altitude. J'ai aussi ajouté le préchargement des tuiles voisines
+(la caméra file à 7,6 km/s, les tuiles n'avaient pas le temps d'arriver).
+
+**15. 18 000 petits dessins de satellites, illisible**
+→ Points lumineux doux. Le détail est réservé au satellite choisi.
+
+**16. La galerie gardait n'importe quoi**
+v1 (filtre sur le texte) : un arbre planté avec des graines d'Apollo 14, un lever de Lune sur une ville, une colline
+nommée « Mars Hill », des cartes, un enregistrement sonore, des doublons.
+→ v2 : **analyse de l'image elle-même** (bords noirs = fond spatial, une seule zone claire = un seul astre,
+taille, forme, netteté). Calibrée sur de vraies images avant de l'activer. Résultat : 49 vrais portraits sur 197 images analysées.
+
+**17. Miniatures cassées dans la galerie**
+J'avais supposé que la taille « medium » existait toujours : faux pour les anciennes images de la NASA.
+→ On utilise l'aperçu réellement fourni par l'API.
+
+### Honnêteté sur les caméras
+
+- La « Vue 3D » du globe est une **reconstitution** et c'est écrit dessus. Ce n'est jamais présenté comme une caméra.
+- Le flux « temps réel » de la sonde SDO date du 21 septembre (en panne côté NASA) : l'appli affiche l'âge réel
+  de chaque image et ne dit « temps réel » que si elle a moins de 6 h.
+- Le film du trajet de l'ISS n'a pas encore pu être testé avec de vraies données : il faut la clé gratuite de la NASA
+  (demande à jsc-earthweb@mail.nasa.gov). Le regroupement des photos en séquences est testé avec des données factices.

@@ -3,6 +3,7 @@
 Lancer en local :  uvicorn orbitra.main:app --reload
 Documentation interactive de l'API : http://127.0.0.1:8000/docs
 """
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -18,7 +19,7 @@ from . import __version__, net
 from .astro import eclipses, meteors, passes, sky, solarsystem
 from .astro.timeutil import to_astro, to_jd, utcnow
 from .config import DEFAULT_ALT_M, DEFAULT_LAT, DEFAULT_LON, WEB_DIR
-from .services import discoveries, launches, satellites, satinfo, smallbodies
+from .services import discoveries, gallery, isscam, launches, satellites, satinfo, smallbodies, spacecams
 
 
 @asynccontextmanager
@@ -44,6 +45,12 @@ async def upstream_error(_request: Request, exc: httpx.HTTPError):
 Lat = Query(DEFAULT_LAT, ge=-90, le=90, description="Latitude (°)")
 Lon = Query(DEFAULT_LON, ge=-180, le=180, description="Longitude (°)")
 Alt = Query(DEFAULT_ALT_M, ge=-500, le=9000, description="Altitude (m)")
+
+
+@app.get("/api/config")
+async def get_config():
+    """Réglages publics pour l'interface (la clé Cesium ion est faite pour être utilisée dans le navigateur)."""
+    return {"cesium_ion_token": os.environ.get("CESIUM_ION_TOKEN") or None}
 
 
 @app.get("/api/health")
@@ -136,6 +143,34 @@ async def get_launches():
 @app.get("/api/exoplanets")
 async def get_exoplanets():
     return await discoveries.exoplanets()
+
+
+@app.get("/api/cameras")
+async def get_cameras():
+    """Dernières images réelles des caméras spatiales (Terre, Soleil) + direct de l'ISS."""
+    return await spacecams.all_cameras()
+
+
+@app.get("/api/iss/photos")
+async def get_iss_photos():
+    """Dernières vraies photos prises par l'équipage de l'ISS."""
+    return {"photos": await isscam.crew_photos(), "sequences_enabled": isscam.eol_key() is not None,
+            "days": isscam.recent_days()}
+
+
+@app.get("/api/iss/sequences")
+async def get_iss_sequences(day: str = Query(..., pattern=r"^\d{8}$", description="Date AAAAMMJJ")):
+    """Séquences de photos consécutives de l'ISS (film du trajet). Nécessite EOL_API_KEY."""
+    try:
+        return await isscam.sequences(day)
+    except RuntimeError as exc:
+        raise HTTPException(502, str(exc))
+
+
+@app.get("/api/gallery")
+async def get_gallery():
+    """Clichés remarquables de la Lune et des planètes, enregistrés automatiquement."""
+    return await gallery.gallery()
 
 
 @app.get("/api/news")

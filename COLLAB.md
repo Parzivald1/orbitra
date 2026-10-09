@@ -8,6 +8,8 @@ Chacun lit ce fichier avant de commencer et le met à jour en finissant. Les rè
 | Tâche | Statut | Qui | Branche |
 |---|---|---|---|
 | v0.1 : 6 modules, tests, CI, PWA | Terminé | Claude | `main` |
+| v0.2 : Terre HD, modèles 3D, caméras réelles, galerie | Terminé | Claude | `main` |
+| Tester le film du trajet de l'ISS avec la vraie clé EOL | En attente de la clé (Théo) | — | — |
 | Cartes de pollution Sentinel-5P (NO₂, CH₄, CO) sur le globe | À faire | — | — |
 | Notifications de passage de l'ISS | À faire | — | — |
 | Emballage Android et iOS avec Capacitor | À faire | — | — |

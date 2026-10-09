@@ -29,10 +29,11 @@ Au lieu de recopier des listes trouvées sur Internet, Orbitra **calcule** la pl
 
 | Module | Ce qu'on y trouve |
 |---|---|
-| **Orbite** | Globe 3D avec **plus de 18 000 objets** en orbite (satellites actifs + nuages de débris), position recalculée en continu. Clic sur un objet : sa mission, ce qu'il récolte, depuis quand il est là, d'où il est parti, quand sa mission se termine, et ses prochains passages au-dessus de chez toi. |
+| **Orbite** | Globe 3D en haute définition (on zoome jusqu'aux rues) avec **plus de 18 000 objets** en orbite, position recalculée en continu. Clic sur un objet : sa mission, ce qu'il récolte, depuis quand il est là, sa fin de mission, ses passages au-dessus de chez toi. En s'approchant, on voit le **vrai satellite en 3D** (modèles officiels de la NASA). |
 | **Système solaire** | Les 8 planètes, 11 comètes célèbres, 3 objets interstellaires et 8 astéroïdes en 3D. On peut avancer ou reculer dans le temps de ±100 ans pour voir les comètes revenir. |
 | **Ciel ce soir** | Phase de la Lune, planètes visibles et à quelle heure, prochain passage de l'ISS visible à l'œil nu. |
 | **Événements** | Éclipses de Soleil et de Lune avec compte à rebours (dont celles visibles depuis ta position), pluies d'étoiles filantes avec une note selon la gêne de la Lune, astéroïdes qui frôlent la Terre. |
+| **Caméras** | **Uniquement de vraies images** : photos des astronautes de l'ISS et son direct vidéo, la Terre entière toutes les 10 minutes (GOES), le Soleil (SDO, SOHO), et une galerie de la Lune et des planètes qui ne garde que les clichés où l'astre est vraiment bien visible (analyse d'image). |
 | **Lancements** | Les prochaines fusées dans le monde, avec compte à rebours. |
 | **Découvertes** | Les dernières exoplanètes confirmées et l'actualité spatiale. |
 
@@ -59,7 +60,9 @@ C'est la partie qui m'a le plus appris :
 - **Éclipses, Lune, planètes** : bibliothèque [Astronomy Engine](https://github.com/cosinekitty/astronomy) (modèle VSOP87).
 - **Taille des astéroïdes** : estimée à partir de la magnitude absolue *H* : D = 1329 / √albédo × 10^(−H/5).
 
-Tout ça est vérifié par **47 tests automatiques** qui comparent les calculs à des événements réels
+- **Galerie** : une analyse d'image maison (bords noirs, composantes connexes, netteté par laplacien) décide si on voit vraiment bien la planète.
+
+Tout ça est vérifié par **54 tests automatiques** qui comparent les calculs à des événements réels
 (éclipse totale du 12 août 2026 en Espagne, éclipse de Lune du 7 septembre 2025, retour de Halley en 2061…).
 
 ## Lancer l'appli chez soi
@@ -73,6 +76,8 @@ uvicorn orbitra.main:app --reload
 ```
 
 Puis ouvrir **http://127.0.0.1:8000**. La doc de l'API se trouve sur http://127.0.0.1:8000/docs.
+
+Options (fichier `.env.example`) : `CESIUM_ION_TOKEN` pour les bâtiments en 3D, `EOL_API_KEY` pour le film du trajet de l'ISS.
 
 Avec Docker : `docker build -t orbitra . && docker run -p 8000:8000 orbitra`
 
@@ -106,10 +111,17 @@ Toutes gratuites et publiques. Merci à elles :
 | Exoplanètes | [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu) |
 | Actualité | [Spaceflight News API](https://spaceflightnewsapi.net) |
 | Pluies d'étoiles filantes | Calendrier de l'[IMO](https://www.imo.net) |
+| Imagerie satellite du globe | Esri World Imagery (Maxar, Earthstar Geographics) |
+| Modèles 3D des satellites | [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources) |
+| Images du jour des satellites | [NASA GIBS](https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api) |
+| Terre en temps réel | NOAA NESDIS STAR (GOES), NASA EPIC (DSCOVR) |
+| Soleil | NASA SDO, ESA/NASA SOHO |
+| Photos des astronautes | NASA Image Library, [Gateway to Astronaut Photography](https://eol.jsc.nasa.gov) |
 
 ## Feuille de route
 
 - [x] v0.1 : orbite, système solaire, ciel, événements, lancements, découvertes
+- [x] v0.2 : Terre HD, satellites en 3D, vraies caméras, galerie, caméra embarquée de l'ISS
 - [ ] Cartes de pollution vues par satellite (NO₂, méthane, CO₂ mesurés par Sentinel-5P) sur le globe
 - [ ] Notifications : « l'ISS passe au-dessus de toi dans 10 minutes »
 - [ ] Applis Android et iOS (Capacitor) sur les stores

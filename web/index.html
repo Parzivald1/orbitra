@@ -32,6 +32,7 @@
       <button data-view="solar"><span>Système solaire</span></button>
       <button data-view="sky"><span>Ciel ce soir</span></button>
       <button data-view="events"><span>Événements</span></button>
+      <button data-view="cameras"><span>Caméras</span></button>
       <button data-view="launches"><span>Lancements</span></button>
       <button data-view="discoveries"><span>Découvertes</span></button>
     </nav>
@@ -56,6 +57,17 @@
           <button data-speed="60">×60</button>
           <button data-speed="600">×600</button>
           <button data-speed="0" title="Revenir à maintenant">⟲</button>
+        </div>
+        <h3>Carte</h3>
+        <div class="cats">
+          <label><input type="checkbox" id="layer-places" checked> Noms des pays et des villes</label>
+          <label><input type="checkbox" id="layer-roads"> Routes</label>
+          <label><input type="checkbox" id="layer-light" checked> Jour / nuit</label>
+          <label class="hidden"><input type="checkbox" id="layer-buildings"> Bâtiments en 3D</label>
+        </div>
+        <div class="timectl">
+          <button id="zoom-home">Zoomer sur ma position</button>
+          <button id="zoom-space">Vue de l'espace</button>
         </div>
         <p class="small dim" id="sat-meta">Chargement du catalogue…</p>
       </aside>
@@ -89,9 +101,14 @@
 
     <section id="view-sky" class="view page"><div class="page-inner" id="sky-content"></div></section>
     <section id="view-events" class="view page"><div class="page-inner" id="events-content"></div></section>
+    <section id="view-cameras" class="view page"><div class="page-inner" id="cameras-content"></div></section>
     <section id="view-launches" class="view page"><div class="page-inner" id="launches-content"></div></section>
     <section id="view-discoveries" class="view page"><div class="page-inner" id="discoveries-content"></div></section>
   </main>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-box"><button class="card-close" id="modal-close" aria-label="Fermer">×</button><div id="modal-body"></div></div>
+  </div>
 
   <script type="module" src="js/app.js"></script>
 </body>

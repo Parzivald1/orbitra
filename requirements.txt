@@ -4,3 +4,4 @@ httpx==0.28.1
 astronomy-engine==2.1.19
 sgp4==2.27
 pytest==9.1.1
+pillow==11.3.0
