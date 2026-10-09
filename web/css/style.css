@@ -1,0 +1,166 @@
+:root {
+  --bg: #05070d;
+  --bg-2: #0b1020;
+  --panel: rgba(12, 17, 32, 0.86);
+  --line: rgba(140, 170, 255, 0.16);
+  --text: #e6ecff;
+  --dim: #8b96b8;
+  --accent: #6ea8ff;
+  --accent-2: #ffd166;
+  --good: #57d68d;
+  --warn: #ffb454;
+  --bad: #ff6b7d;
+  --radius: 14px;
+  --font: "Space Grotesk", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); }
+body { display: flex; flex-direction: column; overflow: hidden; }
+button { font: inherit; color: inherit; cursor: pointer; }
+a { color: var(--accent); }
+h1, h2, h3 { margin: 0 0 .6rem; font-weight: 600; letter-spacing: .01em; }
+h2 { font-size: 1.1rem; display: flex; align-items: center; gap: .5rem; }
+h3 { font-size: .9rem; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; margin-top: 1rem; }
+.mono { font-family: var(--mono); }
+.dim { color: var(--dim); }
+.small { font-size: .78rem; line-height: 1.45; }
+.hidden { display: none !important; }
+
+/* ---------- Barre du haut ---------- */
+.topbar {
+  display: flex; align-items: center; gap: 1rem; padding: .55rem 1rem;
+  background: linear-gradient(180deg, #0a0f1f, #05070d); border-bottom: 1px solid var(--line);
+  z-index: 10;
+}
+.brand { font-weight: 700; letter-spacing: .28em; display: flex; align-items: center; gap: .6rem; white-space: nowrap; }
+.logo {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff, var(--accent) 45%, #1b2a5a 75%);
+  box-shadow: 0 0 0 3px rgba(110, 168, 255, .18), 0 0 18px rgba(110, 168, 255, .6);
+}
+.tabs { display: flex; gap: .25rem; flex: 1; overflow-x: auto; scrollbar-width: none; }
+.tabs button {
+  background: none; border: 1px solid transparent; border-radius: 999px;
+  padding: .4rem .85rem; color: var(--dim); white-space: nowrap; transition: .15s;
+}
+.tabs button:hover { color: var(--text); }
+.tabs button.active { color: var(--text); border-color: var(--line); background: rgba(110, 168, 255, .1); }
+.status { display: flex; align-items: center; gap: .75rem; white-space: nowrap; }
+.icon { vertical-align: -2px; flex: none; }
+.chip { display: inline-flex; align-items: center; gap: .35rem; background: rgba(255, 255, 255, .05); border: 1px solid var(--line); border-radius: 999px; padding: .3rem .7rem; font-size: .85rem; }
+.badge { font-family: var(--mono); font-size: .75rem; background: rgba(110, 168, 255, .15); color: var(--accent); padding: .1rem .5rem; border-radius: 999px; }
+
+/* ---------- Vues ---------- */
+main { flex: 1; position: relative; min-height: 0; }
+.view { position: absolute; inset: 0; display: none; }
+.view.active { display: block; }
+.canvas-host { position: absolute; inset: 0; }
+.page { overflow-y: auto; background: radial-gradient(ellipse at top, #0e1630 0%, var(--bg) 60%); }
+.page-inner { max-width: 1180px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+.panel {
+  position: absolute; top: 1rem; width: 320px; max-height: calc(100% - 2rem); overflow-y: auto;
+  background: var(--panel); backdrop-filter: blur(10px); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1rem; z-index: 5;
+}
+.panel.left { left: 1rem; }
+.panel.right { right: 1rem; }
+.panel input[type=search] {
+  width: 100%; padding: .55rem .75rem; border-radius: 10px; border: 1px solid var(--line);
+  background: rgba(0, 0, 0, .35); color: var(--text); font: inherit;
+}
+.results { list-style: none; margin: .5rem 0; padding: 0; max-height: 220px; overflow-y: auto; }
+.results.tall { max-height: 38vh; }
+.results li { padding: .4rem .5rem; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; gap: .5rem; font-size: .88rem; }
+.results li:hover, .results li.active { background: rgba(110, 168, 255, .12); }
+.results li .mono { color: var(--dim); font-size: .75rem; }
+
+.cats { display: grid; gap: .2rem; margin: .5rem 0; }
+.cats label { display: flex; align-items: center; gap: .5rem; font-size: .85rem; padding: .2rem .25rem; cursor: pointer; border-radius: 6px; }
+.cats label:hover { background: rgba(255, 255, 255, .04); }
+.cats .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.cats .n { margin-left: auto; font-family: var(--mono); font-size: .75rem; color: var(--dim); }
+
+.timectl { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; margin: .6rem 0; }
+.timectl button, .btn {
+  background: rgba(255, 255, 255, .05); border: 1px solid var(--line); border-radius: 8px;
+  padding: .3rem .6rem; font-size: .82rem;
+}
+.timectl button.active, .btn.primary { background: rgba(110, 168, 255, .2); border-color: var(--accent); }
+.toggle { font-size: .82rem; display: flex; align-items: center; gap: .35rem; color: var(--dim); }
+.date-big { font-size: 1.15rem; margin-bottom: .4rem; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+
+/* ---------- Fiches ---------- */
+.card-close { float: right; background: none; border: 0; color: var(--dim); font-size: 1.2rem; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: .3rem .9rem; font-size: .86rem; margin: .7rem 0; }
+.kv dt { color: var(--dim); }
+.kv dd { margin: 0; font-family: var(--mono); text-align: right; }
+.tag { display: inline-block; font-size: .72rem; padding: .12rem .5rem; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); }
+.note { font-size: .86rem; line-height: 1.5; color: #c9d3f5; }
+
+/* ---------- Pages ---------- */
+.page-title { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.page-title h1 { font-size: 1.7rem; }
+.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.grid.wide { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+.tile {
+  background: linear-gradient(180deg, rgba(20, 28, 54, .85), rgba(10, 14, 28, .85));
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; position: relative; overflow: hidden;
+}
+.tile.hero { grid-column: 1 / -1; }
+.tile h3 { margin-top: 0; }
+.big { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+.countdown { font-family: var(--mono); font-size: 1.35rem; color: var(--accent-2); }
+.countdown.past { color: var(--good); }
+.muted-img { width: 100%; height: 150px; object-fit: cover; border-radius: 10px; margin-bottom: .6rem; background: #111; }
+.row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.spacer { flex: 1; }
+.rating { font-size: .75rem; padding: .15rem .55rem; border-radius: 999px; font-weight: 600; }
+.rating.excellente { background: rgba(87, 214, 141, .18); color: var(--good); }
+.rating.bonne { background: rgba(110, 168, 255, .18); color: var(--accent); }
+.rating.moyenne { background: rgba(255, 180, 84, .16); color: var(--warn); }
+.rating.faible { background: rgba(255, 107, 125, .14); color: var(--bad); }
+.bar { height: 6px; border-radius: 99px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--accent); }
+.bar.moon > span { background: #e8e6d9; }
+table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--line); }
+th { color: var(--dim); font-weight: 500; font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }
+td.num { font-family: var(--mono); text-align: right; }
+.table-wrap { overflow-x: auto; }
+.planet-row { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr; gap: .5rem; align-items: center; padding: .55rem 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+.planet-row:last-child { border-bottom: 0; }
+.loading { color: var(--dim); padding: 2rem 0; }
+.error { color: var(--bad); }
+.moon-disc { line-height: 0; }
+
+/* Étiquettes du système solaire */
+.label3d { font-size: 11px; color: var(--text); text-shadow: 0 0 4px #000; pointer-events: none; white-space: nowrap; transform: translateY(-14px); }
+.label3d.small-body { color: var(--dim); font-size: 10px; }
+
+/* Cesium : on cache les crédits encombrants */
+.cesium-viewer-bottom { opacity: .5; }
+
+/* ---------- Mobile ---------- */
+@media (max-width: 760px) {
+  .topbar { flex-wrap: wrap; padding: .5rem; gap: .5rem; }
+  .tabs { order: 3; width: 100%; flex: none; }
+  .tabs button { font-size: .85rem; padding: .35rem .65rem; }
+  #clock { display: none; }
+  .panel { width: auto; left: .5rem !important; right: .5rem !important; top: auto; bottom: .5rem; max-height: 45%; }
+  .panel.right { z-index: 6; }
+  .planet-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* ---------- Fiche satellite détaillée ---------- */
+.sat-photo { width: 100%; max-height: 170px; object-fit: cover; border-radius: 10px; margin: .6rem 0; background: #111; }
+.section-title { font-size: .72rem; color: var(--dim); text-transform: uppercase; letter-spacing: .1em; margin: 1rem 0 .35rem; }
+.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: .35rem; background: var(--dim); }
+.status-dot.on { background: var(--good); box-shadow: 0 0 8px var(--good); }
+.status-dot.off { background: var(--bad); }
+.panel.right { width: 360px; }
+.sources { font-size: .72rem; color: var(--dim); margin-top: .8rem; }
+#sat-info .kv dd { font-family: var(--font); }

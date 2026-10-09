@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Orbitra — tout ce qui se passe au-dessus de nos têtes</title>
+  <meta name="description" content="Satellites en temps réel, éclipses, pluies d'étoiles filantes, comètes, lancements et découvertes spatiales.">
+  <meta name="theme-color" content="#05070d">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script>window.CESIUM_BASE_URL = "https://cdn.jsdelivr.net/npm/cesium@1.122.0/Build/Cesium/";</script>
+  <link href="https://cdn.jsdelivr.net/npm/cesium@1.122.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/cesium@1.122.0/Build/Cesium/Cesium.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+  <script type="importmap">
+    {"imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+    }}
+  </script>
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo" aria-hidden="true"></span>ORBITRA</div>
+    <nav class="tabs" id="tabs" aria-label="Modules">
+      <button data-view="orbit" class="active"><span>Orbite</span></button>
+      <button data-view="solar"><span>Système solaire</span></button>
+      <button data-view="sky"><span>Ciel ce soir</span></button>
+      <button data-view="events"><span>Événements</span></button>
+      <button data-view="launches"><span>Lancements</span></button>
+      <button data-view="discoveries"><span>Découvertes</span></button>
+    </nav>
+    <div class="status">
+      <button id="locate" class="chip" title="Utiliser ma position"><svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg> <span id="loc-name">Paris</span></button>
+      <span id="clock" class="mono dim"></span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Orbite terrestre : globe 3D + tous les objets suivis -->
+    <section id="view-orbit" class="view active">
+      <div id="globe" class="canvas-host"></div>
+      <aside class="panel left" id="orbit-panel">
+        <h2>En orbite <span id="sat-count" class="badge">…</span></h2>
+        <input id="sat-search" type="search" placeholder="Chercher : ISS, HUBBLE, 25544…" autocomplete="off">
+        <ul id="sat-results" class="results"></ul>
+        <div id="sat-cats" class="cats"></div>
+        <div class="timectl">
+          <span class="dim">Vitesse</span>
+          <button data-speed="1" class="active">×1</button>
+          <button data-speed="60">×60</button>
+          <button data-speed="600">×600</button>
+          <button data-speed="0" title="Revenir à maintenant">⟲</button>
+        </div>
+        <p class="small dim" id="sat-meta">Chargement du catalogue…</p>
+      </aside>
+      <aside class="panel right hidden" id="sat-card"></aside>
+    </section>
+
+    <!-- Système solaire en 3D -->
+    <section id="view-solar" class="view">
+      <div id="solar" class="canvas-host"></div>
+      <aside class="panel left">
+        <h2>Système solaire</h2>
+        <div class="date-big mono" id="solar-date">—</div>
+        <input id="solar-range" type="range" min="-36500" max="36500" step="1" value="0" aria-label="Décalage en jours">
+        <div class="timectl">
+          <button data-step="-365">−1 an</button>
+          <button data-step="-30">−1 mois</button>
+          <button id="solar-play" title="Lecture">▶</button>
+          <button data-step="30">+1 mois</button>
+          <button data-step="365">+1 an</button>
+        </div>
+        <div class="timectl">
+          <button id="solar-today">Aujourd'hui</button>
+          <label class="toggle"><input type="checkbox" id="solar-compress" checked> Échelle compressée</label>
+        </div>
+        <h3>Objets</h3>
+        <ul id="solar-list" class="results tall"></ul>
+        <p class="small dim">Planètes : modèle VSOP87. Comètes et astéroïdes : calcul képlérien à deux corps à partir des éléments du JPL.</p>
+      </aside>
+      <aside class="panel right hidden" id="body-card"></aside>
+    </section>
+
+    <section id="view-sky" class="view page"><div class="page-inner" id="sky-content"></div></section>
+    <section id="view-events" class="view page"><div class="page-inner" id="events-content"></div></section>
+    <section id="view-launches" class="view page"><div class="page-inner" id="launches-content"></div></section>
+    <section id="view-discoveries" class="view page"><div class="page-inner" id="discoveries-content"></div></section>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
