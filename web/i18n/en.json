@@ -670,7 +670,130 @@
   "Pas de donnée exploitable à cet endroit.": "No usable data at this location.",
   "Direct de l'ISS": "ISS live feed",
   "ppbv": "ppbv",
-  "DU": "DU"
+  "DU": "DU",
+  "Récupération des lancements…": "Fetching launches…",
+  "Derniers lancements": "Recent launches",
+  "À venir": "Upcoming",
+  "Récents": "Recent",
+  "Clique sur un lancement pour son dossier complet : d'où il part, quand, où il va, qui le gère, l'équipage, la fusée, la météo et les sources.": "Click a launch for its full file: where it lifts off from, when, where it goes, who runs it, the crew, the rocket, the weather and the sources.",
+  "Sources : The Space Devs (Launch Library 2), Open-Meteo, CelesTrak, catalogue GCAT de J. McDowell.": "Sources: The Space Devs (Launch Library 2), Open-Meteo, CelesTrak, J. McDowell's GCAT catalog.",
+  "Destination": "Destination",
+  "Équipage": "Crew",
+  "diffusion en direct": "live broadcast",
+  "décollé": "lifted off",
+  "Report :": "Delay:",
+  "Échec :": "Failure:",
+  "Quand": "When",
+  "Heure (UTC)": "Time (UTC)",
+  "Heure sur place": "Local time at the site",
+  "Chez toi": "Your time",
+  "Précision": "Precision",
+  "Fenêtre de tir": "Launch window",
+  "Météo favorable": "Favorable weather",
+  "D'où elle décolle": "Where it lifts off from",
+  "Pas de tir": "Launch pad",
+  "Base": "Launch site",
+  "Coordonnées": "Coordinates",
+  "Tirs depuis ce pas": "Launches from this pad",
+  "Tirs depuis la base": "Launches from this site",
+  "Délai depuis le tir précédent ici": "Time since the previous launch here",
+  "Voir le pas de tir sur le globe": "See the pad on the globe",
+  "Où elle va": "Where it goes",
+  "Destination :": "Destination:",
+  "La mission": "The mission",
+  "Pour :": "For:",
+  "Qui gère le lancement": "Who runs the launch",
+  "Type": "Type",
+  "Pays": "Country",
+  "Fondée en": "Founded in",
+  "Direction": "Leadership",
+  "Historique": "Track record",
+  "Ce lancement est son": "This launch is its",
+  "La fusée": "The rocket",
+  "réutilisable": "reusable",
+  "Hauteur": "Height",
+  "Diamètre": "Diameter",
+  "Masse au décollage": "Liftoff mass",
+  "Poussée au décollage": "Liftoff thrust",
+  "Charge en orbite basse": "Payload to low orbit",
+  "Charge vers l'orbite GTO": "Payload to GTO",
+  "Premier vol": "First flight",
+  "Coût d'un lancement": "Cost per launch",
+  "Fiabilité": "Reliability",
+  "déjà volé": "flight-proven",
+  "neuf": "new",
+  "Pas de récupération (étage sacrifié)": "No recovery (expended stage)",
+  "Météo prévue au pas de tir": "Forecast at the launch pad",
+  "Chargement de la prévision…": "Loading the forecast…",
+  "Les sources (OSINT)": "Sources (OSINT)",
+  "source": "source",
+  "Pas de journal public pour ce lancement.": "No public log for this launch.",
+  "Vidéos :": "Videos:",
+  "Liens :": "Links:",
+  "Heure prévue": "Forecast time",
+  "Température": "Temperature",
+  "Vent / rafales": "Wind / gusts",
+  "Nuages": "Clouds",
+  "Risque de pluie": "Chance of rain",
+  "Énergie orageuse (CAPE)": "Thunderstorm energy (CAPE)",
+  "Repères indicatifs (chaque lanceur a ses propres règles). Source : Open-Meteo.": "Indicative thresholds (each launcher has its own rules). Source: Open-Meteo.",
+  "favorable": "favorable",
+  "à surveiller": "watch",
+  "défavorable": "unfavorable",
+  "rafales fortes": "strong gusts",
+  "vent soutenu": "sustained wind",
+  "risque d'orage (foudre)": "thunderstorm risk (lightning)",
+  "pluie probable": "rain likely",
+  "couverture nuageuse épaisse": "thick cloud cover",
+  "Recherche des objets mis en orbite…": "Looking for the objects placed in orbit…",
+  "retombé": "re-entered",
+  "Cet objet n'est pas (ou plus) dans le catalogue des objets suivis : il est peut-être retombé ou trop récent.": "This object is not (or no longer) in the tracked catalog: it may have re-entered or be too recent.",
+  "Prévision disponible seulement dans les 15 jours avant le décollage.": "Forecast only available within 15 days of liftoff.",
+  "Lancement ou pas de tir inconnu.": "Unknown launch or pad.",
+  "Pas encore de désignation internationale (elle est attribuée après le lancement).": "No international designation yet (it's assigned after launch).",
+  "Satellite": "Satellite",
+  "Feu vert pour le lancement": "Go for Launch",
+  "À confirmer": "To Be Confirmed",
+  "À déterminer": "To Be Determined",
+  "Lancement réussi": "Launch Successful",
+  "Échec": "Launch Failure",
+  "Échec partiel": "Partial Failure",
+  "Compte à rebours suspendu": "On Hold",
+  "En vol": "In Flight",
+  "Orbite basse": "Low Earth orbit",
+  "Orbite héliosynchrone": "Sun-synchronous orbit",
+  "Orbite polaire": "Polar orbit",
+  "Transfert géostationnaire": "Geostationary transfer",
+  "Orbite géostationnaire": "Geostationary orbit",
+  "Orbite moyenne": "Medium Earth orbit",
+  "Orbite très elliptique": "Highly elliptical orbit",
+  "Vers la Lune": "To the Moon",
+  "Vers Mars": "To Mars",
+  "Orbite autour du Soleil": "Orbit around the Sun",
+  "Vol suborbital": "Suborbital flight",
+  "Point de Lagrange L2": "Lagrange point L2",
+  "Entre 200 et 2 000 km d'altitude, un tour de Terre en 90 minutes environ. C'est là que vivent l'ISS, Starlink et la plupart des satellites d'observation.": "Between 200 and 2,000 km altitude, one orbit takes about 90 minutes. Home of the ISS, Starlink and most Earth-observation satellites.",
+  "Orbite polaire vers 500-800 km, calée sur le Soleil : le satellite repasse au-dessus de chaque endroit toujours à la même heure solaire. Idéale pour comparer des images d'un jour à l'autre.": "A polar orbit around 500-800 km, locked to the Sun: the satellite passes over each place at the same solar time every day. Perfect for comparing images day after day.",
+  "Passe au-dessus des deux pôles : avec la rotation de la Terre en dessous, le satellite finit par survoler toute la planète.": "Passes over both poles: as the Earth turns underneath, the satellite ends up flying over the whole planet.",
+  "Orbite très allongée (200 km au plus bas, 36 000 km au plus haut). Le satellite utilise ensuite son propre moteur pour se placer en orbite géostationnaire.": "A very stretched orbit (200 km at its lowest, 36,000 km at its highest). The satellite then uses its own engine to reach geostationary orbit.",
+  "À 35 786 km au-dessus de l'équateur, le satellite tourne à la même vitesse que la Terre : il paraît immobile dans le ciel. Télécoms et météo.": "35,786 km above the equator, the satellite turns at the same speed as the Earth: it looks motionless in the sky. Telecoms and weather.",
+  "Entre 2 000 et 35 000 km. C'est l'orbite des systèmes de navigation : GPS, Galileo, GLONASS, BeiDou.": "Between 2,000 and 35,000 km. The orbit of navigation systems: GPS, Galileo, GLONASS, BeiDou.",
+  "Orbite très allongée qui permet de rester longtemps au-dessus d'une région (ex. orbite Molniya pour la Russie).": "A very stretched orbit that lets a satellite linger over one region (e.g. the Molniya orbit for Russia).",
+  "Injection translunaire : la fusée quitte l'orbite terrestre pour rejoindre la Lune, à environ 384 000 km.": "Trans-lunar injection: the rocket leaves Earth orbit to reach the Moon, about 384,000 km away.",
+  "Mise en orbite autour de la Lune.": "Placed in orbit around the Moon.",
+  "Trajectoire interplanétaire vers Mars : 6 à 9 mois de voyage. Possible seulement tous les 26 mois, quand la Terre et Mars sont bien placées.": "An interplanetary trajectory to Mars: 6 to 9 months of travel. Only possible every 26 months, when Earth and Mars line up.",
+  "Trajectoire héliocentrique : la sonde quitte l'attraction de la Terre pour tourner autour du Soleil.": "A heliocentric trajectory: the probe escapes Earth's gravity to orbit the Sun.",
+  "La fusée monte dans l'espace puis retombe sans faire le tour de la Terre.": "The rocket goes up to space then falls back without circling the Earth.",
+  "À 1,5 million de km vers le Soleil, un point d'équilibre où une sonde peut rester entre la Terre et le Soleil.": "1.5 million km toward the Sun, a balance point where a probe can stay between the Earth and the Sun.",
+  "À 1,5 million de km à l'opposé du Soleil, là où se trouve le télescope James Webb.": "1.5 million km away from the Sun, where the James Webb telescope sits.",
+  "L'heure de décollage est confirmée par des sources officielles ou fiables.": "Current T-0 confirmed by official or reliable sources.",
+  "Une date est annoncée, mais pas encore confirmée officiellement.": "A date has been announced but not yet officially confirmed.",
+  "La date reste incertaine : elle peut encore changer beaucoup.": "The date is still uncertain and may change a lot.",
+  "La charge utile a été placée sur l'orbite prévue.": "The payload was placed in the planned orbit.",
+  "Le lancement n'a pas atteint son objectif.": "The launch did not reach its goal.",
+  "La charge utile a été placée sur une orbite différente de celle prévue.": "The payload was placed in a different orbit than planned.",
+  "Le lancement est en attente.": "The launch is on hold.",
+  "La fusée est en train de voler.": "The rocket is flying right now."
  },
  "patterns": [
   [
@@ -1000,6 +1123,94 @@
   [
    "\\bTerre\\b",
    "Earth"
+  ],
+  [
+   "^(\\d[\\d,. ]*) réussis sur (\\d[\\d,. ]*) \\(([\\d.,]+) %\\)",
+   "$1 successful out of $2 ($3%)"
+  ],
+  [
+   " · (\\d[\\d,. ]*) succès d'affilée",
+   " · $1 in a row"
+  ],
+  [
+   "^(\\d[\\d,. ]*)e de l'année$",
+   "#$1 this year"
+  ],
+  [
+   "^(\\d+) astronautes?$",
+   "$1 astronaut(s)"
+  ],
+  [
+   "^(\\d+)e vol$",
+   "flight #$1"
+  ],
+  [
+   " · premier vol le ",
+   " · first flight on "
+  ],
+  [
+   "^Premier étage ",
+   "First stage "
+  ],
+  [
+   "^Atterrissage : ",
+   "Landing: "
+  ],
+  [
+   " · réussi$",
+   " · successful"
+  ],
+  [
+   " · raté$",
+   " · failed"
+  ],
+  [
+   "^Équipage \\((\\d+)\\)$",
+   "Crew ($1)"
+  ],
+  [
+   "objets? mis en orbite",
+   "object(s) placed in orbit"
+  ],
+  [
+   "\\(désignation ",
+   "(designation "
+  ],
+  [
+   " · orbite atteinte : ",
+   " · orbit reached: "
+  ],
+  [
+   ", inclinée à ",
+   ", inclined at "
+  ],
+  [
+   "^… et (\\d[\\d,. ]*) autres\\.$",
+   "… and $1 more."
+  ],
+  [
+   "^Ce lancement est la tentative orbitale n° (.+) de l'histoire \\((.+)e cette année\\)\\.$",
+   "This launch is orbital attempt #$1 in history (#$2 this year)."
+  ],
+  [
+   "^vaisseau ",
+   "spacecraft "
+  ],
+  [
+   " · vaisseau ",
+   " · spacecraft "
+  ],
+  [
+   "^(\\d+) j (\\d+) h$",
+   "$1 d $2 h"
+  ],
+  [
+   "^Météo indisponible \\((.+)\\)\\.$",
+   "Weather unavailable ($1)."
+  ],
+  [
+   "^Objets indisponibles \\((.+)\\)\\.$",
+   "Objects unavailable ($1)."
   ]
  ],
  "compass": {

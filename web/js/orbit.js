@@ -101,6 +101,7 @@ export async function init(state) {
   }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
   setupBuildings(); // bâtiments 3D, seulement si une clé Cesium ion est configurée
+  setupLaunchBridge();
   setupAtmosphere();
   await loadCatalog();
 }
@@ -576,6 +577,52 @@ async function loadPasses(rec) {
         <div class="small dim">${esc(p.rise_dir)} → ${esc(p.max_dir)} (${p.max_elevation}°) → ${esc(p.set_dir)} · ${Math.round(p.duration_s / 60)} min · fin ${esc(fmtTime(p.set))}</div>
       </div>`).join("");
   } catch (err) { failed(box, err); }
+}
+
+// ---------- Liens depuis les autres onglets (lancements…) ----------
+
+let launchEntities = [];
+
+// Point à une distance donnée le long d'un grand cercle (trigonométrie sphérique)
+function destination(lat, lon, azimuthDeg, km) {
+  const R = 6371, d = km / R, az = Cesium.Math.toRadians(azimuthDeg);
+  const φ1 = Cesium.Math.toRadians(lat), λ1 = Cesium.Math.toRadians(lon);
+  const φ2 = Math.asin(Math.sin(φ1) * Math.cos(d) + Math.cos(φ1) * Math.sin(d) * Math.cos(az));
+  const λ2 = λ1 + Math.atan2(Math.sin(az) * Math.sin(d) * Math.cos(φ1), Math.cos(d) - Math.sin(φ1) * Math.sin(φ2));
+  return [Cesium.Math.toDegrees(λ2), Cesium.Math.toDegrees(φ2)];
+}
+
+function showLaunch({ lat, lon, name, inclination }) {
+  for (const e of launchEntities) viewer.entities.remove(e);
+  launchEntities = [viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(lon, lat),
+    point: { pixelSize: 12, color: Cesium.Color.fromCssColorString("#ff9f43"), outlineColor: Cesium.Color.WHITE, outlineWidth: 2 },
+    label: { text: name, font: "600 13px Space Grotesk, sans-serif", pixelOffset: new Cesium.Cartesian2(0, -22), fillColor: Cesium.Color.WHITE,
+      outlineColor: Cesium.Color.BLACK, outlineWidth: 4, style: Cesium.LabelStyle.FILL_AND_OUTLINE, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+  })];
+  if (inclination != null) {
+    // Plan de l'orbite atteinte : le grand cercle incliné de i qui passe par le pas de tir.
+    // Azimut de tir : sin(Az) = cos(i) / cos(latitude) (impossible si i < latitude : on vise plein est)
+    const ratio = Math.cos(Cesium.Math.toRadians(inclination)) / Math.cos(Cesium.Math.toRadians(lat));
+    const az = Math.abs(ratio) <= 1 ? Cesium.Math.toDegrees(Math.asin(ratio)) : 90;
+    const pts = [];
+    for (let km = 0; km <= 40030; km += 400) pts.push(...destination(lat, lon, az, km));
+    launchEntities.push(viewer.entities.add({
+      polyline: { positions: Cesium.Cartesian3.fromDegreesArray(pts), width: 2,
+        material: new Cesium.PolylineDashMaterialProperty({ color: Cesium.Color.fromCssColorString("#ff9f43"), dashLength: 18 }) },
+    }));
+  }
+  viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(lon, lat - 6, inclination != null ? 9_000_000 : 1_500_000), duration: 2 });
+}
+
+function setupLaunchBridge() {
+  window.addEventListener("orbitra:launch", (e) => showLaunch(e.detail));
+  window.addEventListener("orbitra:select-sat", async (e) => {
+    for (let i = 0; i < 60 && !records.length; i++) await new Promise((r) => setTimeout(r, 500)); // catalogue en cours de chargement
+    const rec = records.find((r) => r.id === String(e.detail.norad));
+    if (rec) select(rec);
+    else alert(t("Cet objet n'est pas (ou plus) dans le catalogue des objets suivis : il est peut-être retombé ou trop récent."));
+  });
 }
 
 // ---------- Pollution vue de l'espace (NASA GIBS) ----------

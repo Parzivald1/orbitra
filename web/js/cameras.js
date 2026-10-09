@@ -2,7 +2,7 @@
 //  - caméra embarquée de l'ISS : photos de l'équipage + film du trajet (séquences de vraies photos)
 //  - caméras spatiales : Terre (GOES, DSCOVR) et Soleil (SDO, SOHO), avec l'heure réelle de chaque cliché
 //  - galerie : la Lune et les planètes, seulement quand on les voit vraiment bien
-import { api, esc, safeUrl, fmtDate, fmtDateTime, loading, failed } from "./util.js";
+import { api, esc, safeUrl, fmtDate, fmtDateTime, loading, failed, openModal as openSharedModal, closeModal } from "./util.js";
 import { icons } from "./icons.js";
 
 let el, galleryData = null, galleryFilter = "all";
@@ -14,8 +14,6 @@ export async function init() {
     <section id="cam-iss"></section>
     <section id="cam-space"></section>
     <section id="cam-gallery"></section>`;
-  document.getElementById("modal-close").onclick = closeModal;
-  document.getElementById("modal").onclick = (e) => { if (e.target.id === "modal") closeModal(); };
   await Promise.all([renderIss(), renderSpaceCams(), renderGallery()]);
 }
 
@@ -23,14 +21,7 @@ export async function init() {
 
 let stopPlayer = null;
 function openModal(html) {
-  document.getElementById("modal-body").innerHTML = html;
-  document.getElementById("modal").classList.remove("hidden");
-}
-function closeModal() {
-  stopPlayer?.();
-  stopPlayer = null;
-  document.getElementById("modal").classList.add("hidden");
-  document.getElementById("modal-body").innerHTML = ""; // coupe aussi la vidéo en direct
+  openSharedModal(html, () => { stopPlayer?.(); stopPlayer = null; });
 }
 
 function openPhoto(p) {

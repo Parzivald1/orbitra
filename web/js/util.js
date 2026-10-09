@@ -61,3 +61,29 @@ export const refreshCountdowns = tick;
 
 export function loading(el, text = "Chargement…") { el.innerHTML = `<p class="loading">${esc(text)}</p>`; }
 export function failed(el, err) { el.innerHTML = `<p class="error">Impossible de charger : ${esc(err.message)}</p>`; }
+
+// ---------- Fenêtre modale partagée ----------
+let onModalClose = null;
+export function openModal(html, onClose = null) {
+  onModalClose?.();
+  onModalClose = onClose;
+  document.getElementById("modal-body").innerHTML = html;
+  const modal = document.getElementById("modal");
+  modal.classList.remove("hidden");
+  document.getElementById("modal-close").onclick = closeModal;
+  modal.onclick = (e) => { if (e.target.id === "modal") closeModal(); };
+  document.onkeydown = (e) => { if (e.key === "Escape") closeModal(); };
+}
+export function closeModal() {
+  onModalClose?.();
+  onModalClose = null;
+  document.getElementById("modal").classList.add("hidden");
+  document.getElementById("modal-body").innerHTML = ""; // coupe aussi les vidéos en cours
+}
+
+// Demande au globe d'afficher quelque chose (ouvre l'onglet Orbite si besoin)
+export function showOnGlobe(type, detail) {
+  closeModal();
+  document.querySelector('#tabs [data-view="orbit"]').click();
+  setTimeout(() => window.dispatchEvent(new CustomEvent(`orbitra:${type}`, { detail })), 300);
+}

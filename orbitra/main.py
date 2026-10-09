@@ -4,6 +4,7 @@ Lancer en local :  uvicorn orbitra.main:app --reload
 Documentation interactive de l'API : http://127.0.0.1:8000/docs
 """
 import os
+import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -19,7 +20,7 @@ from . import __version__, net
 from .astro import eclipses, meteors, passes, sky, solarsystem
 from .astro.timeutil import to_astro, to_jd, utcnow
 from .config import DEFAULT_ALT_M, DEFAULT_LAT, DEFAULT_LON, WEB_DIR
-from .services import atmosphere, discoveries, gallery, isscam, launches, osint, satellites, satinfo, smallbodies, spacecams
+from .services import atmosphere, discoveries, launch_osint, gallery, isscam, launches, osint, satellites, satinfo, smallbodies, spacecams
 
 
 @asynccontextmanager
@@ -144,8 +145,25 @@ async def get_positions(date: datetime | None = Query(None, description="Date IS
 # ---------- Lancements et découvertes ----------
 
 @app.get("/api/launches")
-async def get_launches():
-    return await launches.upcoming()
+async def get_launches(when: str = Query("upcoming", pattern="^(upcoming|previous)$")):
+    """Lancements à venir ou récents, avec le dossier OSINT complet de chacun."""
+    return await (launch_osint.upcoming() if when == "upcoming" else launch_osint.previous())
+
+
+@app.get("/api/launches/{launch_id}/weather")
+async def get_launch_weather(launch_id: str):
+    """Météo prévue au pas de tir à l'heure du décollage (Open-Meteo)."""
+    if not re.fullmatch(r"[0-9a-f-]{36}", launch_id):
+        raise HTTPException(422, "Identifiant invalide")
+    return await launch_osint.weather(launch_id)
+
+
+@app.get("/api/launches/{launch_id}/objects")
+async def get_launch_objects(launch_id: str):
+    """Objets mis en orbite par ce lancement (CelesTrak SATCAT)."""
+    if not re.fullmatch(r"[0-9a-f-]{36}", launch_id):
+        raise HTTPException(422, "Identifiant invalide")
+    return await launch_osint.objects(launch_id)
 
 
 @app.get("/api/exoplanets")
