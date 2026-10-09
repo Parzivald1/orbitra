@@ -41,6 +41,11 @@ il pèse, à quel programme il appartient, s'il est civil, commercial ou militai
 quelles fréquences radio il émet. Pour l'ISS on trouve même les fréquences des scaphandres russes, qu'on peut capter
 avec une simple clé SDR.
 
+**La pollution vue de l'espace.** Le dioxyde d'azote et le dioxyde de soufre mesurés par Sentinel-5P, le monoxyde de
+carbone et le méthane, les particules fines et la couche d'ozone, directement sur le globe. Un clic à n'importe quel
+endroit donne la vraie valeur mesurée par le satellite. La carte est une moyenne sur 7 jours que mon serveur calcule
+lui-même à partir des données quotidiennes de la NASA.
+
 **Les caméras.** Ici je voulais seulement du vrai : les dernières photos prises par les astronautes de l'ISS,
 la Terre entière photographiée toutes les 10 minutes par les satellites météo GOES, le Soleil vu par les sondes
 SDO et SOHO. Chaque image affiche sa vraie date. Et il y a une galerie de la Lune et des planètes qui ne garde
@@ -68,10 +73,12 @@ C'est la partie dont je suis le plus fier, parce qu'il a fallu comprendre avant 
 - **Les comètes.** Résolution de l'équation de Kepler par la méthode de Newton, sa version hyperbolique pour les
   objets qui viennent d'autres étoiles (ʻOumuamua, Borisov, 3I/ATLAS), et l'équation de Barker pour les paraboles.
 - **La taille des astéroïdes.** Estimée à partir de leur magnitude absolue : D = 1329 / √albédo × 10^(−H/5).
+- **La pollution.** Je relis la couleur de chaque pixel et je la reconvertis en valeur grâce à la table officielle de la
+  NASA, puis je fais une moyenne sur 7 jours pixel par pixel pour combler les trous laissés par les nuages.
 - **La galerie.** Un ordinateur ne sait pas si une photo est belle. Par contre il peut mesurer si l'astre est seul,
   entier, net et sur fond noir : bords de l'image, composantes connexes, variance du laplacien pour la netteté.
 
-Tout ça est vérifié par 57 tests automatiques, dont certains comparent mes calculs à de vrais événements :
+Tout ça est vérifié par 64 tests automatiques, dont certains comparent mes calculs à de vrais événements :
 l'éclipse totale du 12 août 2026 en Espagne, l'éclipse de Lune du 7 septembre 2025, le retour de Halley en 2061.
 
 ## Ce qui n'a pas marché
@@ -129,7 +136,7 @@ photos de l'ISS) et l'ESA (SOHO).
 
 - [x] Orbite, système solaire, ciel, événements, lancements, découvertes
 - [x] Terre HD, satellites en 3D, caméras réelles, galerie, dossier OSINT
-- [ ] Afficher la pollution vue par satellite (NO₂, méthane, CO₂ mesurés par Sentinel-5P) : c'était l'idée de départ
+- [x] La pollution vue par satellite (NO₂, SO₂, CO, méthane, particules, ozone) : c'était l'idée de départ
 - [ ] Une notification quand l'ISS passe au-dessus de chez soi
 - [ ] Les applis Android et iOS
 - [ ] L'interface en anglais

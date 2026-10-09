@@ -11,7 +11,7 @@ import astronomy
 import httpx
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
@@ -19,7 +19,7 @@ from . import __version__, net
 from .astro import eclipses, meteors, passes, sky, solarsystem
 from .astro.timeutil import to_astro, to_jd, utcnow
 from .config import DEFAULT_ALT_M, DEFAULT_LAT, DEFAULT_LON, WEB_DIR
-from .services import discoveries, gallery, isscam, launches, osint, satellites, satinfo, smallbodies, spacecams
+from .services import atmosphere, discoveries, gallery, isscam, launches, osint, satellites, satinfo, smallbodies, spacecams
 
 
 @asynccontextmanager
@@ -151,6 +151,31 @@ async def get_launches():
 @app.get("/api/exoplanets")
 async def get_exoplanets():
     return await discoveries.exoplanets()
+
+
+@app.get("/api/atmosphere/layers")
+async def get_atmosphere_layers():
+    """Couches de pollution mesurées par satellite, avec leurs dates disponibles."""
+    return await atmosphere.layers()
+
+
+@app.get("/api/atmosphere/tile/{key}/{date}/{z}/{y}/{x}.png")
+async def get_atmosphere_tile(key: str, date: str, z: int, y: int, x: int, days: int = Query(7, ge=1, le=14)):
+    """Tuile moyennée sur plusieurs jours (calculée ici à partir des tuiles quotidiennes de la NASA)."""
+    import re as _re
+    if key not in atmosphere.BY_KEY or not _re.fullmatch(r"\d{4}-\d{2}-\d{2}", date) or not 0 <= z <= atmosphere.ZOOM \
+            or not (0 <= x < 2 ** z and 0 <= y < 2 ** z):
+        raise HTTPException(422, "Paramètres de tuile invalides")
+    png = await atmosphere.composite_tile(key, date, z, y, x, days)
+    return Response(png, media_type="image/png", headers={"Cache-Control": "public, max-age=21600"})
+
+
+@app.get("/api/atmosphere/value")
+async def get_atmosphere_value(key: str = Query(..., pattern="^(no2|so2|co|ch4|aod|o3)$"),
+                               date: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"),
+                               lat: float = Query(..., ge=-90, le=90), lon: float = Query(..., ge=-180, le=180)):
+    """Valeur mesurée par le satellite à un endroit précis (lue dans la tuile + table de couleurs NASA)."""
+    return await atmosphere.value_at(key, date, lat, lon)
 
 
 @app.get("/api/cameras")

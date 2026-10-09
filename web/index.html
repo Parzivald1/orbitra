@@ -65,6 +65,16 @@
           <label><input type="checkbox" id="layer-light" checked> Jour / nuit</label>
           <label class="hidden"><input type="checkbox" id="layer-buildings"> Bâtiments en 3D</label>
         </div>
+        <h3>Pollution vue de l'espace</h3>
+        <select id="atmo-layer" class="select"><option value="">Aucune</option></select>
+        <div id="atmo-controls" class="hidden">
+          <div class="row" style="margin:.4rem 0">
+            <input type="date" id="atmo-date" class="date-input">
+            <label class="toggle"><input type="checkbox" id="atmo-avg" checked> Moyenne 7 jours</label>
+            <label class="toggle">Opacité <input type="range" id="atmo-opacity" min="0.2" max="1" step="0.05" value="0.85"></label>
+          </div>
+          <div id="atmo-info"></div>
+        </div>
         <div class="timectl">
           <button id="zoom-home">Zoomer sur ma position</button>
           <button id="zoom-space">Vue de l'espace</button>

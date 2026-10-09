@@ -169,7 +169,34 @@ exactement pour ça que j'écris des tests.
 
 ---
 
-## À faire ensuite
+## Jour 1, toujours : enfin la pollution vue de l'espace
 
-La pollution vue par satellite (NO₂, méthane, CO₂ mesurés par Sentinel-5P) affichée sur le globe. C'était mon idée
-de départ et je ne l'ai toujours pas faite, il est temps.
+C'était l'idée de départ du projet, et c'est probablement la partie la plus scientifique.
+
+Un satellite ne « voit » pas un gaz. Il mesure la lumière du Soleil renvoyée par la Terre, et chaque molécule absorbe
+des longueurs d'onde bien précises. Plus il y a de NO₂ entre le sol et le satellite, plus ses raies d'absorption
+sont marquées. Sentinel-5P fait ça pour toute la planète chaque jour avec son instrument TROPOMI.
+
+La NASA republie ces mesures sous forme de tuiles colorées (GIBS). J'ai branché six couches : NO₂ et SO₂ (Sentinel-5P),
+monoxyde de carbone et méthane (Aqua), particules fines (MODIS) et couche d'ozone (Suomi NPP).
+
+**Lire la vraie valeur sous la souris.** Une image colorée, c'est joli mais ce n'est pas une mesure. La NASA publie
+pour chaque couche la table qui associe chaque couleur à un intervalle de valeurs. Je calcule donc dans quelle tuile
+et quel pixel tombe le point cliqué (projection Web Mercator), je lis sa couleur et je la convertis en valeur.
+Résultat : Shanghai à 1,5 × 10¹⁶ molécules/cm² de NO₂, le Pacifique à 1,6 × 10¹⁴, l'Etna qui ressort en SO₂.
+
+**Trois « pas de mesure » d'affilée.** Paris, Shanghai, le Pacifique : rien. J'ai d'abord cru à un bug dans mon calcul
+de pixel. En regardant les tuiles, le calcul était juste : ce jour-là, les nuages ne laissaient que 16 % de la tuile
+de Paris exploitable. Maintenant, si le pixel est vide, je cherche la mesure la plus proche (jusqu'à 15 km), puis
+je remonte jusqu'à 7 jours en arrière, et l'appli dit d'où vient le chiffre.
+
+**Une carte mouchetée illisible.** Une seule journée de mesures, c'est plein de trous et de bruit. Les scientifiques
+ne publient jamais ça, ils font des moyennes. Mon serveur fait donc pareil : il décode les tuiles des 7 derniers jours
+en valeurs, fait la moyenne pixel par pixel en ignorant les trous, puis recolore avec la même table. Et pour ne pas
+noyer la Terre sous un voile jaune, tout ce qui est sous le niveau de fond devient transparent : seules les zones
+vraiment polluées se colorent.
+
+Un petit bug au passage : certaines tables de couleurs donnent une valeur unique au lieu d'un intervalle,
+ce qui faisait planter la lecture des particules fines.
+
+Une limite honnête : au-dessus du Sahara, MODIS ne mesure pas les aérosols (le sable est trop clair et l'éblouit).

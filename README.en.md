@@ -43,6 +43,10 @@ program it belongs to, whether it's civil, commercial or military, whether it's 
 radio frequencies it transmits on. For the ISS you even get the frequencies of the Russian spacesuits, which you
 can pick up with a cheap SDR dongle.
 
+**Pollution seen from space.** Nitrogen dioxide and sulfur dioxide measured by Sentinel-5P, carbon monoxide and methane,
+fine particles and the ozone layer, right on the globe. Click anywhere to get the real value measured by the satellite.
+The map is a 7-day average that my server computes itself from NASA's daily data.
+
 **The cameras.** Here I only wanted real images: the latest photos taken by the ISS crew, the whole Earth captured
 every 10 minutes by the GOES weather satellites, the Sun seen by the SDO and SOHO probes. Every image shows its
 real capture date. There's also a gallery of the Moon and the planets that only keeps pictures where you can
@@ -70,10 +74,12 @@ This is the part I'm proudest of, because I had to actually understand things be
 - **Comets.** Kepler's equation solved with Newton's method, its hyperbolic version for objects coming from other
   stars ('Oumuamua, Borisov, 3I/ATLAS), and Barker's equation for parabolic orbits.
 - **Asteroid sizes.** Estimated from their absolute magnitude: D = 1329 / √albedo × 10^(−H/5).
+- **Pollution.** I read the color of each pixel and convert it back into a value using NASA's official color table,
+  then average 7 days pixel by pixel to fill the gaps left by clouds.
 - **The gallery.** A computer can't tell if a photo is beautiful. But it can measure whether the body is alone,
   whole, sharp and on a black background: image borders, connected components, and Laplacian variance for sharpness.
 
-All of this is checked by 57 automated tests, some of which compare my results with real events: the total solar
+All of this is checked by 64 automated tests, some of which compare my results with real events: the total solar
 eclipse of August 12, 2026 in Spain, the lunar eclipse of September 7, 2025, and Halley's return in 2061.
 
 ## What didn't work
@@ -116,7 +122,7 @@ ISS photos) and ESA (SOHO).
 
 - [x] Orbit, solar system, night sky, events, launches, discoveries
 - [x] HD Earth, 3D satellites, real cameras, gallery, OSINT file
-- [ ] Show pollution measured from space (NO₂, methane, CO₂ from Sentinel-5P): that was the original idea
+- [x] Pollution measured from space (NO₂, SO₂, CO, methane, particles, ozone): that was the original idea
 - [ ] A notification when the ISS is about to pass over you
 - [ ] Android and iOS apps
 - [ ] English interface

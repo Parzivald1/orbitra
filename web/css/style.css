@@ -189,3 +189,9 @@ td.num { font-family: var(--mono); text-align: right; }
 .tag-mil { border-color: var(--bad); color: var(--bad); }
 .radios { list-style: none; margin: 0 0 .4rem; padding: 0; font-size: .8rem; }
 .radios li { padding: .2rem 0; border-bottom: 1px solid var(--line); }
+
+/* ---------- Pollution ---------- */
+.select { width: 100%; padding: .45rem .6rem; border-radius: 8px; border: 1px solid var(--line); background: rgba(0,0,0,.35); color: var(--text); font: inherit; font-size: .85rem; color-scheme: dark; }
+.legend { width: 100%; background: #fff; border-radius: 6px; padding: 2px; margin: .4rem 0; }
+.atmo-value { margin-top: .5rem; padding: .55rem .65rem; border: 1px solid var(--accent); border-radius: 10px; background: rgba(110,168,255,.08); font-size: .84rem; }
+.atmo-value .big { font-size: 1.15rem; }

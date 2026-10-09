@@ -32,6 +32,7 @@ const esriLayer = (path, credit) => new Cesium.UrlTemplateImageryProvider({
 let viewer, billboards, cursor = 0, selected = null, appState;
 let orbitEntity = null, labelEntity = null, observerEntity = null, modelEntity = null, photoEntity = null;
 let placesLayer = null, roadsLayer = null, cameraLayer = null, buildings = null, pov = false;
+let atmo = { layers: [], current: null, imagery: null, pin: null, lighting: true };
 let records = [];
 let companions = []; // objets amarrés au satellite choisi (ex. modules de l'ISS catalogués à part)
 const visible = new Set(Object.keys(CATS).filter((c) => c !== "debris"));
@@ -94,10 +95,12 @@ export async function init(state) {
   handler.setInputAction((e) => {
     const picked = viewer.scene.pick(e.position, 16, 16);
     const rec = picked?.id?.satrec ? picked.id : picked?.id?.orbitraRec;
-    if (rec) select(rec, false);
+    if (rec) { select(rec, false); return; }
+    if (atmo.current) readAtmosphere(e.position); // pas de satellite cliqué : on lit la pollution à cet endroit
   }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
   setupBuildings(); // bâtiments 3D, seulement si une clé Cesium ion est configurée
+  setupAtmosphere();
   await loadCatalog();
 }
 
@@ -572,6 +575,101 @@ async function loadPasses(rec) {
         <div class="small dim">${esc(p.rise_dir)} → ${esc(p.max_dir)} (${p.max_elevation}°) → ${esc(p.set_dir)} · ${Math.round(p.duration_s / 60)} min · fin ${esc(fmtTime(p.set))}</div>
       </div>`).join("");
   } catch (err) { failed(box, err); }
+}
+
+// ---------- Pollution vue de l'espace (NASA GIBS) ----------
+
+const SUP = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
+function fmtValue(v) {
+  if (v == null) return "—";
+  if (Math.abs(v) >= 1e5) {
+    const exp = Math.floor(Math.log10(Math.abs(v)));
+    return `${fmtNum(v / 10 ** exp, 1)} × 10${String(exp).replace(/./g, (c) => SUP[c])}`;
+  }
+  return fmtNum(v, Math.abs(v) < 10 ? 2 : 0);
+}
+
+async function setupAtmosphere() {
+  const sel = document.getElementById("atmo-layer");
+  try { atmo.layers = await api("atmosphere/layers"); } catch { sel.disabled = true; return; }
+  sel.innerHTML = `<option value="">Aucune</option>` + atmo.layers.map((l) =>
+    `<option value="${esc(l.key)}">${esc(l.formula)} · ${esc(l.name)} (${esc(l.satellite)})</option>`).join("");
+  const date = document.getElementById("atmo-date");
+  sel.onchange = () => {
+    atmo.current = atmo.layers.find((l) => l.key === sel.value) ?? null;
+    if (atmo.current) { date.value = atmo.current.latest; date.max = atmo.current.latest; date.min = atmo.current.first; }
+    showAtmosphere();
+  };
+  date.onchange = showAtmosphere;
+  document.getElementById("atmo-avg").onchange = showAtmosphere;
+  document.getElementById("atmo-opacity").oninput = (e) => { if (atmo.imagery) atmo.imagery.alpha = +e.target.value; };
+}
+
+function showAtmosphere() {
+  const l = atmo.current;
+  if (atmo.imagery) { viewer.imageryLayers.remove(atmo.imagery); atmo.imagery = null; }
+  if (atmo.pin) { viewer.entities.remove(atmo.pin); atmo.pin = null; }
+  document.getElementById("atmo-controls").classList.toggle("hidden", !l);
+  if (!l) { viewer.scene.globe.enableLighting = document.getElementById("layer-light").checked; return; }
+  const date = document.getElementById("atmo-date").value || l.latest;
+  const avg = document.getElementById("atmo-avg").checked;
+  atmo.imagery = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+    // moyenne sur 7 jours calculée par notre serveur (comble les trous des nuages), ou la journée brute de la NASA
+    url: avg ? `/api/atmosphere/tile/${l.key}/${date}/{z}/{y}/{x}.png?days=7` : l.tile_url.replace("{date}", date),
+    maximumLevel: 6,
+    credit: new Cesium.Credit(`Mesures : NASA GIBS · ${l.satellite} / ${l.instrument}`, true),
+  }));
+  atmo.imagery.alpha = +document.getElementById("atmo-opacity").value;
+  viewer.imageryLayers.raiseToTop(placesLayer);
+  viewer.scene.globe.enableLighting = false; // la nuit assombrirait les mesures
+  document.getElementById("atmo-info").innerHTML = `
+    <img class="legend" src="${esc(safeUrl(l.legend))}" alt="Légende ${esc(l.formula)}">
+    <p class="small dim" style="margin:.2rem 0">Unité : ${esc(l.units)} · ${esc(l.satellite)}, instrument ${esc(l.instrument)}${document.getElementById("atmo-avg").checked ? ` · moyenne des 7 jours précédant la date${l.fades_background ? " · le niveau de fond est laissé transparent" : ""}` : " · une seule journée"}</p>
+    <p class="note small">${esc(l.what)}</p>
+    <p class="small dim">${esc(l.health)}</p>
+    <p class="small"><strong>Clique sur le globe</strong> pour lire la valeur mesurée, ou va voir :</p>
+    <div class="chips">${l.hotspots.map((h, i) => `<button class="chip" data-h="${i}">${esc(h.name)}</button>`).join("")}</div>
+    <div id="atmo-value"></div>`;
+  document.querySelector("#atmo-info .chips").onclick = (e) => {
+    const b = e.target.closest("[data-h]");
+    if (!b) return;
+    const h = l.hotspots[+b.dataset.h];
+    viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(h.lon, h.lat - 8, 3_200_000),
+      orientation: { pitch: Cesium.Math.toRadians(-65) }, duration: 2,
+      complete: () => readAtmosphere(null, h.lat, h.lon) });
+  };
+}
+
+async function readAtmosphere(screenPos, lat, lon) {
+  if (screenPos) {
+    const cart = viewer.camera.pickEllipsoid(screenPos, viewer.scene.globe.ellipsoid);
+    if (!cart) return;
+    const geo = Cesium.Cartographic.fromCartesian(cart);
+    lat = Cesium.Math.toDegrees(geo.latitude);
+    lon = Cesium.Math.toDegrees(geo.longitude);
+  }
+  const l = atmo.current, box = document.getElementById("atmo-value");
+  box.innerHTML = `<div class="atmo-value dim">Lecture de la mesure…</div>`;
+  let v;
+  try {
+    v = await api("atmosphere/value", { key: l.key, date: document.getElementById("atmo-date").value, lat: lat.toFixed(4), lon: lon.toFixed(4) });
+  } catch (err) { box.innerHTML = `<div class="atmo-value error">${esc(err.message)}</div>`; return; }
+  const where = `${fmtNum(lat, 2)}°, ${fmtNum(lon, 2)}°`;
+  const text = v.found ? `${fmtValue(v.value)} ${v.units === "sans unité" ? "" : v.units}`.trim() : "pas de mesure";
+  if (atmo.pin) viewer.entities.remove(atmo.pin);
+  atmo.pin = viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(lon, lat),
+    point: { pixelSize: 9, color: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 2 },
+    label: { text: `${l.formula} : ${text}`, font: "600 13px Space Grotesk, sans-serif", pixelOffset: new Cesium.Cartesian2(0, -20),
+      fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 4, style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY },
+  });
+  box.innerHTML = v.found ? `<div class="atmo-value">
+      <div class="big">${esc(l.formula)} : ${esc(text)}</div>
+      <div>Niveau : <strong>${esc(v.level ?? "—")}</strong></div>
+      <div class="small dim">${esc(where)} · mesure du ${esc(fmtDate(v.date))}${v.days_before ? ` (${v.days_before} j avant la date choisie)` : ""}${v.distance_km ? ` · à ${fmtNum(v.distance_km, 1)} km du point` : ""}</div>
+      <div class="small dim">Intervalle exact de la table NASA : ${fmtValue(v.low)} à ${fmtValue(v.high)}</div>
+    </div>` : `<div class="atmo-value"><div>${esc(where)}</div><div class="small dim">${esc(v.reason)}</div></div>`;
 }
 
 // ---------- Bâtiments 3D (optionnel) ----------

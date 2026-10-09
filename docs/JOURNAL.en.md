@@ -161,7 +161,31 @@ One small bug caught by the tests: "Cylindre +  2 panneaux" with a double space.
 
 ---
 
-## Next
+## Day 1, still: pollution seen from space, finally
 
-Pollution seen from space (NO₂, methane, CO₂ measured by Sentinel-5P) shown on the globe. It was my original idea and
-I still haven't done it, so it's about time.
+This was the original idea behind the project, and it's probably the most scientific part.
+
+A satellite doesn't "see" a gas. It measures sunlight reflected by the Earth, and each molecule absorbs very specific
+wavelengths. The more NO₂ there is between the ground and the satellite, the deeper its absorption lines. Sentinel-5P
+does this for the whole planet every day with its TROPOMI instrument.
+
+NASA republishes these measurements as colored map tiles (GIBS). I plugged in six layers: NO₂ and SO₂ (Sentinel-5P),
+carbon monoxide and methane (Aqua), fine particles (MODIS) and the ozone layer (Suomi NPP).
+
+**Reading the real value under the cursor.** A colored image looks nice, but it isn't a measurement. For each layer, NASA
+publishes the table that maps every color to a range of values. So I compute which tile and pixel the clicked point falls
+in (Web Mercator projection), read its color and convert it back to a value. Result: Shanghai at 1.5 × 10¹⁶ molecules/cm²
+of NO₂, the Pacific at 1.6 × 10¹⁴, and Mount Etna standing out in SO₂.
+
+**Three "no data" in a row.** Paris, Shanghai, the Pacific: nothing. I first thought my pixel math was wrong. Looking at
+the tiles, the math was fine: that day, clouds left only 16% of the Paris tile usable. Now, if the pixel is empty, I look
+for the nearest measurement (up to 15 km), then go back up to 7 days, and the app says where the number comes from.
+
+**An unreadable speckled map.** A single day of data is full of gaps and noise. Scientists never publish that, they average.
+So my server does the same: it decodes the tiles of the last 7 days into values, averages them pixel by pixel while
+ignoring gaps, then recolors them with the same table. And so the Earth isn't drowned under a yellow veil, anything below
+the background level becomes transparent: only the truly polluted areas get colored.
+
+One small bug along the way: some color tables give a single value instead of a range, which crashed the fine-particle layer.
+
+An honest limitation: over the Sahara, MODIS can't measure aerosols (the sand is too bright and dazzles it).
