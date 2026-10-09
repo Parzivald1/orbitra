@@ -1,170 +1,175 @@
 # Journal de bord
 
-Ici je note tout : ce qui a marché, ce qui a planté et comment je l'ai corrigé.
-C'est aussi ce qui sert à reprendre le projet (seul, avec un contributeur ou avec une IA) sans tout redécouvrir.
+[English version](JOURNAL.en.md)
+
+Je note ici ce que je fais, ce qui casse et comment je le répare. Au début c'était pour moi, pour ne pas refaire
+deux fois les mêmes erreurs. Maintenant je me dis que c'est aussi le meilleur moyen de montrer comment je travaille.
 
 ---
 
-## 9 octobre 2026 : v0.1, première version complète
+## Jour 1 : la v0.1
 
-### L'idée de départ
+### Le point de départ
 
-Au début je voulais juste suivre l'ISS. Puis je me suis dit : pourquoi pas **tout** ce qui est dans l'espace ?
-Les satellites, les débris, les éclipses, les comètes, les étoiles filantes, les lancements, les découvertes.
-J'ai découpé ça en 6 modules indépendants pour pouvoir les finir un par un.
+Au départ je voulais juste savoir où était l'ISS. Puis je me suis dit : pourquoi s'arrêter là ? Les satellites,
+les débris, les éclipses, les comètes, les étoiles filantes, les lancements… J'ai découpé tout ça en six modules
+indépendants pour pouvoir finir chaque morceau avant de passer au suivant, sinon je savais que j'allais tout
+commencer et rien finir.
 
-### Choix techniques
+### Les choix techniques, et pourquoi
 
-| Choix | Pourquoi |
-|---|---|
-| **Python + FastAPI** pour le backend | Je connais Python, FastAPI génère tout seul la doc de l'API (`/docs`) |
-| **JavaScript sans framework** pour le front | Pas besoin de Node ni de build : on ouvre et ça marche |
-| **CesiumJS** pour le globe | Globe 3D pro, gère le jour et la nuit et des milliers de points |
-| **Three.js** pour le système solaire | Plus léger que Cesium pour une simple scène 3D |
-| **Calcul des positions dans le navigateur** | 18 000 satellites à recalculer en continu : impossible côté serveur pour plusieurs utilisateurs. Le serveur envoie les TLE une fois, le navigateur fait SGP4. |
-| **Mes propres calculs** (Kepler, changements de repère, passages) | Pour comprendre la physique au lieu d'appeler une boîte noire, et pouvoir les tester |
+Python avec FastAPI pour le serveur, parce que je connais Python et que FastAPI génère la documentation de l'API tout
+seul. Pour l'interface, du JavaScript sans framework : pas de Node, pas de compilation, on ouvre et ça marche.
+CesiumJS pour le globe (c'est ce qu'utilisent des pros pour ce genre de visualisation) et Three.js pour le système
+solaire, plus léger.
+
+Le choix le plus important : calculer la position des 18 000 satellites **dans le navigateur** et pas sur le serveur.
+Le serveur envoie les données une fois, et c'est le navigateur de chaque utilisateur qui fait les calculs. Sinon,
+avec plusieurs utilisateurs, le serveur aurait explosé.
+
+Et j'ai voulu coder moi-même les calculs importants (Kepler, changements de repère, passages au-dessus de chez soi)
+au lieu d'appeler une bibliothèque qui fait tout. C'est plus long, mais c'est le seul moyen de vraiment comprendre,
+et ça se teste.
 
 ### Ce qui a marché du premier coup
 
-- 7 routes de l'API sur 9 au premier lancement
-- Les 41 premiers tests (Kepler, passages, éclipses) sont passés directement
-- Le catalogue complet : **18 621 objets**, dont 10 658 Starlink et 2 680 débris
+Sept routes de l'API sur neuf, et les 41 premiers tests. Quand j'ai vu le catalogue s'afficher avec 18 621 objets,
+dont 10 658 Starlink et 2 680 débris, ça m'a fait un choc : je savais qu'il y en avait beaucoup, mais pas à ce point.
 
-### Ce qui n'a PAS marché, et les correctifs
+### Ce qui a cassé
 
-**1. CelesTrak m'a bloqué**
-En testant les URL plusieurs fois, CelesTrak a répondu : *« GP data has not updated since your last successful download »*.
-Leurs données ne changent que toutes les 2 h, et ils refusent qu'on les retélécharge avant.
-→ **Correctif** : cache sur disque (`.cache/*.tle`). On ne redemande jamais un groupe avant 2 h, et si CelesTrak
-refuse ou tombe en panne, on garde la dernière copie. Prévu aussi : si le gros groupe « active » n'est pas dispo,
-on reconstruit le catalogue à partir des petits groupes.
+**CelesTrak m'a bloqué.** En testant les adresses plusieurs fois, le site a fini par me répondre « GP data has not
+updated since your last successful download ». Leurs données ne changent que toutes les 2 h et ils refusent qu'on
+les retélécharge avant. Logique, ils sont financés par des dons. J'ai ajouté un cache sur disque : on ne redemande
+jamais un groupe avant 2 h, et si CelesTrak refuse, on garde la dernière copie.
 
-**2. « Ciel ce soir » plantait (erreur 500)**
-J'avais passé `+1` et `-1` à la fonction de lever et coucher d'Astronomy Engine, qui attend `Direction.Rise` / `Direction.Set`.
-→ **Correctif** : utiliser l'énumération `Direction`.
+**« Ciel ce soir » plantait avec une erreur 500.** Je passais `+1` et `-1` à la fonction de lever et coucher, alors
+qu'elle attend `Direction.Rise` et `Direction.Set`. Une vraie erreur bête, mais ça m'a appris à lire la doc avant.
 
-**3. Les éclipses plantaient : `NaN` dans le JSON**
-Pour une éclipse partielle, le cône d'ombre de la Lune ne touche pas la Terre : il n'y a pas de « point central »
-et la bibliothèque renvoie `NaN`, que le JSON refuse.
-→ **Correctif** : on n'envoie la latitude et la longitude que si elles existent. Un test vérifie qu'aucun `NaN` ne sort.
+**Les éclipses plantaient à cause d'un `NaN`.** Pour une éclipse partielle, l'ombre de la Lune ne touche pas la Terre,
+donc il n'y a pas de « point central » et la bibliothèque renvoie `NaN`, que le format JSON refuse. Maintenant on
+n'envoie ce point que s'il existe, et un test vérifie qu'aucun `NaN` ne sort.
 
-**4. Les « dernières » exoplanètes dataient de 2022**
-L'archive de la NASA applique `TOP 30` **avant** le `ORDER BY` : le tri ne servait à rien.
-→ **Correctif** : je récupère les découvertes des 2 dernières années et je trie en Python.
+**Les « dernières » exoplanètes dataient de 2022.** J'ai mis du temps à comprendre : l'archive de la NASA applique
+le `TOP 30` avant le `ORDER BY`. Donc elle prenait 30 planètes au hasard, puis les triait. Je récupère maintenant
+les découvertes des deux dernières années et je trie moi-même.
 
-**5. Le globe apparaissait tout noir dans les captures automatiques**
-Les satellites s'affichaient mais pas la Terre. J'ai écrit une page de diagnostic : Cesium disait que la Terre était
-bien chargée (`tilesLoaded=true`). En testant dans un vrai Chrome piloté par le protocole DevTools, tout s'affichait.
-→ **Conclusion** : un défaut du Chrome « headless » (sans fenêtre), pas de mon code. Leçon : vérifier l'outil de test avant d'accuser le code.
+**Le globe était tout noir dans mes captures automatiques.** Les satellites apparaissaient mais pas la Terre. J'ai
+écrit une page de test : Cesium disait que la Terre était bien chargée. En vérifiant dans un vrai Chrome, tout
+s'affichait. Le problème venait de Chrome en mode sans fenêtre, pas de mon code. Leçon retenue : vérifier son outil
+de test avant d'accuser son code.
 
-**6. Il manquait 8 comètes et astéroïdes sur 22 (dont Halley !)**
-J'envoyais 22 requêtes en même temps au JPL, qui en refusait une partie. Pire : mon cache gardait l'échec en mémoire pendant **24 h**.
-→ **Correctif** : 4 requêtes maximum en parallèle (sémaphore), 3 essais avec une attente qui augmente,
-et une erreur n'est **jamais** mise en cache. Résultat : 22/22.
+**Il manquait la comète de Halley.** Il manquait en fait 8 objets sur 22. J'envoyais 22 requêtes en même temps au
+JPL, qui en refusait une partie, et mon cache gardait l'échec pendant 24 h. Double erreur. Correctif : 4 requêtes
+maximum en parallèle, 3 essais, et une erreur n'est jamais mise en cache.
 
-**7. Mercure « visible » en plein jour**
-L'appli disait que Mercure était visible au coucher du Soleil à 5° de hauteur, et que Jupiter était
-« au mieux » à 7 h 57… après le lever du Soleil.
-→ **Correctif** : la fenêtre d'observation va maintenant du moment où le Soleil passe 6° sous l'horizon jusqu'à l'aube,
-et une planète doit monter à au moins 10°.
+**Mercure était « visible » en plein crépuscule.** Et Jupiter était « au mieux » à 7 h 57, après le lever du Soleil.
+Ma fenêtre de nuit allait du coucher au lever du Soleil, alors qu'on ne voit rien tant que le Soleil n'est pas à
+au moins 6° sous l'horizon. Corrigé, et une planète doit maintenant monter à 10° minimum.
 
-**8. Des codes de sites de lancement faux**
-J'avais écrit de mémoire la liste des codes (PKMTR, TSC, TNSTA…) : 5 étaient faux, et Sentinel-5P apparaissait
-lancé depuis « PLMSC » sans traduction.
-→ **Correctif** : liste officielle reprise depuis celestrak.org/satcat/launchsites.php (42 sites).
-Leçon : toujours vérifier à la source.
+**Cinq codes de sites de lancement étaient faux.** Je les avais écrits de mémoire. Erreur. J'ai repris la liste
+officielle de CelesTrak (42 sites). Depuis je vérifie systématiquement à la source.
 
-**9. `qlmanage` (aperçu macOS) bloqué en générant les icônes PNG**
-→ **Correctif** : petit script Python qui dessine l'icône pixel par pixel et écrit le PNG à la main (zlib + CRC).
+### Côté sécurité
 
-### Améliorations demandées en cours de route
-
-- **Plus d'émojis** : ils s'affichent différemment selon les téléphones. Remplacés par des icônes SVG au trait,
-  et la Lune est dessinée en SVG selon sa vraie phase.
-- **Fiche complète quand on clique sur un satellite** : sa mission, ce qu'il récolte, depuis quand, d'où il est parti,
-  le pays, la fin de mission, une photo. Trois sources croisées : CelesTrak SATCAT (tous les objets), Wikidata et Wikipédia
-  (objets connus), et des fiches que j'ai rédigées par famille (Starlink, GPS, Galileo, Sentinel, NOAA…).
-
-### Sécurité (déformation pentest oblige)
-
-- Tout texte venant d'une API externe est échappé avant affichage (anti-XSS), et les liens sont filtrés (http/https seulement)
-- Le numéro NORAD est vérifié (chiffres uniquement) avant d'être mis dans la requête SPARQL de Wikidata (anti-injection)
-- Coordonnées GPS validées côté serveur (latitude entre −90 et 90, etc.)
-- Aucune clé d'API dans le code
-
-### Prochaine étape
-
-Les cartes de pollution mesurées par Sentinel-5P (NO₂, CH₄, CO) affichées sur le globe : l'idée de départ du projet.
+Je fais du pentest à côté, donc je ne pouvais pas laisser passer ça. Tout texte qui vient d'une API externe est
+échappé avant d'être affiché (sinon un titre d'article piégé pourrait exécuter du code : faille XSS). Les liens ne
+peuvent être qu'en http ou https. Le numéro de satellite est vérifié avant d'entrer dans la requête envoyée à
+Wikidata (anti-injection). Les coordonnées GPS sont validées côté serveur. Et aucune clé secrète dans le code.
 
 ---
 
-## 9 octobre 2026 (suite) : v0.2, Terre HD, vrais satellites en 3D, vraies caméras
+## Jour 1, la suite : la v0.2
 
-### Ce que j'ai demandé
+J'ai montré la première version et j'ai eu des retours (surtout les miens, en fait) : la Terre était pixelisée,
+on ne voyait rien quand on zoomait, les satellites étaient des points sans intérêt, et je voulais voir de vraies
+images de l'espace. Pas des simulations.
 
-- Une Terre vraiment belle, pas pixelisée, où on peut zoomer jusqu'aux rues comme sur Maps
-- Des satellites plus lisibles, et le **vrai** satellite quand on s'approche
-- Accéder à la caméra des satellites, mais **seulement de vraies images, pas de simulation**
-- Des caméras qui filment l'espace, et une galerie qui garde les clichés où on voit vraiment bien une planète ou la Lune
-- Une caméra embarquée de l'ISS avec les photos des astronautes, et un « film » de son trajet fait de vraies photos
+### La Terre pixelisée
 
-### Ce qui a été fait
+Deux causes. La texture de base de Cesium est une petite image basse résolution, et sur un écran Retina, Cesium
+dessine par défaut à **la moitié de la résolution** de l'écran pour économiser. J'ai branché une imagerie satellite
+haute résolution (on voit les toits de Paris), forcé la vraie résolution et ajouté l'anticrénelage.
 
-| Demande | Solution |
-|---|---|
-| Terre HD | Imagerie satellite Esri (jusqu'au niveau 19 : rues et toits) + rendu à la vraie résolution de l'écran (Retina) + anticrénelage |
-| Satellites lisibles | Points lumineux doux par catégorie ; en vue rapprochée, tous les autres disparaissent |
-| Le vrai satellite | Modèles 3D officiels de la NASA pour 22 satellites (ISS, Hubble, Terra, Aqua, Landsat, GOES…) ; sinon sa vraie photo |
-| Caméras des satellites | Direct vidéo de l'ISS ; images du jour de Terra, Aqua, Suomi NPP, NOAA-20/21 (NASA GIBS) ; photo de la Terre entière toutes les 10 min (GOES-18/19) |
-| Caméras de l'espace | Soleil (SDO, SOHO), Terre depuis 1,5 million de km (DSCOVR/EPIC), avec l'heure réelle de chaque cliché |
-| Galerie | Enregistrement automatique, avec une **analyse d'image** qui vérifie que l'astre est seul, entier et net |
-| Caméra embarquée ISS | Dernières photos de l'équipage ; film du trajet à partir des rafales de photos (nécessite une clé NASA gratuite) |
+### Le vrai satellite en 3D
 
-### Ce qui n'a PAS marché, et les correctifs
+La NASA publie des modèles 3D de ses satellites. J'en ai trouvé 22 qui correspondent à des satellites encore en
+orbite, et j'ai vérifié chaque numéro de satellite dans le catalogue avant de les associer.
 
-**10. La Terre était floue et pixelisée**
-Deux causes : la texture de base de Cesium (NaturalEarthII) est une vignette basse résolution, et sur un écran
-Retina Cesium dessine par défaut à **demi-résolution**.
-→ Imagerie Esri haute résolution + `useBrowserRecommendedResolution: false` + `msaaSamples: 4`.
+Les modèles sont d'abord sortis **tout noirs**. Le rendu réaliste de Cesium n'a pas de lumière ambiante dans
+l'espace, donc la face non éclairée est noire. J'ai écrit un petit *shader* (un programme qui tourne sur la carte
+graphique) pour les éclairer correctement.
 
-**11. La caméra partait toute seule au-dessus de la France**
-`setPov(false)` recentrait la caméra à chaque sélection, même si on n'était pas en vue satellite.
-→ On ne recentre que si on sortait vraiment de cette vue.
+Ensuite l'ISS est sortie **toute blanche**. J'ai ouvert le fichier : le modèle de la NASA n'a aucune couleur,
+ses 19 matériaux sont gris. J'ai donc identifié les pièces par leur forme. Les panneaux solaires, par exemple,
+sont le grand élément plat de 30 × 45 m avec très peu de sommets. Puis j'ai écrit un script (`tools/recolor_glb.py`)
+qui change uniquement les couleurs dans le fichier, sans toucher à la géométrie. C'est le bug qui m'a le plus plu à résoudre.
 
-**12. Les modèles 3D étaient tout noirs, puis tout blancs**
-Noirs : le rendu physique de Cesium n'a pas de lumière ambiante dans l'espace. Correctif : un petit *shader*
-(programme pour la carte graphique) qui éclaire le modèle avec le Soleil plus une lumière ambiante.
-Blancs : le modèle de l'ISS publié par la NASA n'a **aucune couleur** (19 matériaux, tous gris à 40 %).
-J'ai identifié les pièces par leur géométrie (les panneaux solaires sont le grand élément plat de 30 × 45 m
-avec très peu de sommets) et écrit `tools/recolor_glb.py`, qui réécrit uniquement les couleurs dans le fichier `.glb`.
+### Les autres bugs du globe
 
-**13. L'icône jaune restait collée sur l'ISS en vue rapprochée**
-Les autres modules de l'ISS (Nauka…) sont catalogués à part et restaient affichés. Et au démarrage, leurs
-positions n'étaient pas encore calculées quand on cherchait les voisins de l'ISS.
-→ On calcule leurs positions au moment de la sélection, et ils disparaissent en vue rapprochée.
+- Une **icône jaune restait collée sur l'ISS** en vue rapprochée. C'étaient les autres modules de la station
+  (Nauka, etc.), catalogués à part. Et au démarrage, leurs positions n'étaient pas encore calculées quand je
+  cherchais les voisins de l'ISS. Je calcule maintenant leurs positions au moment de la sélection.
+- **Des bandes sur la Terre** quand on suivait l'ISS. J'ai désactivé les effets un par un pour trouver le coupable :
+  c'est l'éclairage jour/nuit de Cesium près de la frontière jour/nuit. Il s'efface maintenant sous 6 500 km.
+- **18 000 petits dessins de satellites**, ça piquait les yeux. Ils sont devenus des points lumineux doux, et le
+  détail est réservé au satellite choisi.
+- **La caméra partait toute seule au-dessus de la France** à cause d'un recentrage déclenché au mauvais moment.
 
-**14. Des bandes sur la Terre en suivant l'ISS**
-Diagnostic en désactivant les effets un par un : c'est l'éclairage jour/nuit de Cesium près du terminateur.
-→ L'effet jour/nuit s'efface sous 6 500 km d'altitude. J'ai aussi ajouté le préchargement des tuiles voisines
-(la caméra file à 7,6 km/s, les tuiles n'avaient pas le temps d'arriver).
+### Les vraies caméras
 
-**15. 18 000 petits dessins de satellites, illisible**
-→ Points lumineux doux. Le détail est réservé au satellite choisi.
+Je me suis fixé une règle : **aucune image de synthèse présentée comme réelle**. La vue 3D du globe est écrite
+« reconstitution ». Les caméras, elles, sont de vraies images avec leur vraie date : photos de l'équipage de l'ISS,
+Terre entière toutes les 10 minutes (GOES), Soleil (SDO, SOHO), Terre vue depuis 1,5 million de km (DSCOVR).
 
-**16. La galerie gardait n'importe quoi**
-v1 (filtre sur le texte) : un arbre planté avec des graines d'Apollo 14, un lever de Lune sur une ville, une colline
-nommée « Mars Hill », des cartes, un enregistrement sonore, des doublons.
-→ v2 : **analyse de l'image elle-même** (bords noirs = fond spatial, une seule zone claire = un seul astre,
-taille, forme, netteté). Calibrée sur de vraies images avant de l'activer. Résultat : 49 vrais portraits sur 197 images analysées.
+Petite surprise : le flux « temps réel » de la sonde SDO datait de 18 jours. L'appli affiche donc l'âge de chaque
+image et ne dit « temps réel » que si elle a moins de 6 heures.
 
-**17. Miniatures cassées dans la galerie**
-J'avais supposé que la taille « medium » existait toujours : faux pour les anciennes images de la NASA.
-→ On utilise l'aperçu réellement fourni par l'API.
+### La galerie, le plus dur
 
-### Honnêteté sur les caméras
+Je voulais une galerie qui garde seulement les photos où on voit vraiment bien une planète ou la Lune.
 
-- La « Vue 3D » du globe est une **reconstitution** et c'est écrit dessus. Ce n'est jamais présenté comme une caméra.
-- Le flux « temps réel » de la sonde SDO date du 21 septembre (en panne côté NASA) : l'appli affiche l'âge réel
-  de chaque image et ne dit « temps réel » que si elle a moins de 6 h.
-- Le film du trajet de l'ISS n'a pas encore pu être testé avec de vraies données : il faut la clé gratuite de la NASA
-  (demande à jsc-earthweb@mail.nasa.gov). Le regroupement des photos en séquences est testé avec des données factices.
+La première version filtrait sur le texte des titres. Résultat : elle a gardé une photo d'arbre (« Apollo 14 Moon
+Tree », un arbre planté avec des graines qui étaient allées autour de la Lune), un lever de Lune sur une ville,
+une colline appelée « Mars Hill », des cartes, un enregistrement sonore et des doublons. Pas terrible.
+
+Pour la deuxième version, j'ai fait analyser **l'image elle-même** : les bords doivent être noirs (fond spatial),
+il doit y avoir une seule grosse zone claire (un seul astre, pas un montage), d'une taille raisonnable, à peu près
+ronde, et nette (variance du laplacien). Je l'ai calibrée sur de vraies images avant de l'activer. Résultat :
+49 vrais portraits sur 197 images analysées. Jupiter par Hubble, la Lune par Galileo, Uranus par Voyager 2.
+
+### La caméra embarquée de l'ISS
+
+Les dernières photos des astronautes s'affichent, et j'ai découvert en les parcourant que la Française
+**Sophie Adenot** est à bord en ce moment.
+
+J'ai aussi préparé un « film du trajet » : les astronautes prennent souvent des rafales (une photo par seconde),
+et mises bout à bout elles montrent exactement ce qu'ils ont vu. Mais la base qui donne l'heure et la position de
+chaque photo demande une clé gratuite de la NASA, que j'ai demandée. En attendant, le regroupement des photos est
+testé avec des données factices. Je préfère le dire clairement : cette partie n'a pas encore tourné avec de vraies données.
+
+---
+
+## Jour 1, encore : l'OSINT
+
+Je fais du pentest, donc l'OSINT (le renseignement en sources ouvertes), ça me parle. Pour les satellites, les
+grands outils d'OSINT ne servent à rien : ils sont faits pour enquêter sur des sites ou des personnes. Les vraies
+sources, ce sont des bases de données ouvertes.
+
+- **GCAT**, de Jonathan McDowell (astrophysicien au Harvard-Smithsonian) : la base la plus complète qui existe,
+  69 433 objets. Constructeur, masse, dimensions, programme, et surtout la classe d'utilisateur : civil,
+  commercial, **militaire** ou amateur. On y trouve aussi l'enregistrement du satellite à l'ONU.
+- **SatNOGS**, un projet open source de stations radio amateurs : les fréquences de chaque satellite. Pour l'ISS il y
+  a 50 émetteurs, dont ceux des scaphandres russes, qu'on peut écouter avec une clé SDR à 30 €.
+
+Je voulais aussi utiliser la base UCS, mais elle n'est plus accessible à son ancienne adresse.
+
+Un petit bug trouvé par les tests : « Cylindre +  2 panneaux » avec un double espace. Ce genre de détail, c'est
+exactement pour ça que j'écris des tests.
+
+---
+
+## À faire ensuite
+
+La pollution vue par satellite (NO₂, méthane, CO₂ mesurés par Sentinel-5P) affichée sur le globe. C'était mon idée
+de départ et je ne l'ai toujours pas faite, il est temps.

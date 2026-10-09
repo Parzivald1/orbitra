@@ -1,71 +1,89 @@
 <div align="center">
 
-<img src="web/icons/icon-192.png" width="96" alt="Logo Orbitra">
+<img src="web/icons/icon-192.png" width="88" alt="Logo Orbitra">
 
 # Orbitra
 
-**Tout ce qui se passe au-dessus de nos têtes, en temps réel.**
-
-Satellites · débris · éclipses · étoiles filantes · comètes · astéroïdes · lancements · exoplanètes
+Tout ce qui se passe au-dessus de nos têtes, en temps réel.
 
 [![Tests](https://github.com/Parzivald1/orbitra/actions/workflows/ci.yml/badge.svg)](https://github.com/Parzivald1/orbitra/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Licence](https://img.shields.io/badge/licence-MIT-green)
 
+**Français** · [English](README.en.md)
+
 ![Le globe avec les 18 000 objets suivis](docs/screenshots/orbite.png)
 
 </div>
 
-## Le projet
+## Pourquoi j'ai fait ça
 
-Je voulais une appli qui réponde à toutes les questions que je me pose quand je regarde le ciel :
-*c'est quoi ce point lumineux qui bouge ? Il sert à quoi ce satellite ? C'est quand la prochaine éclipse ?
-La prochaine pluie d'étoiles filantes, ça vaut le coup avec la Lune ? Elle est où la comète de Halley en ce moment ?*
+Un soir je regardais le ciel et j'ai vu un point lumineux le traverser sans clignoter. Je me suis demandé ce
+que c'était, à quoi ça servait, qui l'avait envoyé. Et je me suis rendu compte qu'il n'existait pas vraiment
+d'appli qui réponde à toutes ces questions au même endroit, en français, et en expliquant comment ça marche.
 
-Au lieu de recopier des listes trouvées sur Internet, Orbitra **calcule** la plupart des choses lui-même
-à partir des données brutes de la NASA, de l'ESA, du JPL et de CelesTrak.
+Alors je l'ai construite. Orbitra suit plus de 18 000 objets en orbite (satellites, débris, stations), calcule
+les éclipses, les pluies d'étoiles filantes, la position des comètes, et montre de vraies images prises depuis
+l'espace. Mon objectif c'était de **calculer** un maximum de choses moi-même à partir des données brutes de la NASA,
+de l'ESA ou du JPL, plutôt que de recopier des listes toutes faites. C'est ce qui m'a le plus appris.
 
-## Ce que fait l'appli
+## Ce qu'on peut faire avec
 
-| Module | Ce qu'on y trouve |
-|---|---|
-| **Orbite** | Globe 3D en haute définition (on zoome jusqu'aux rues) avec **plus de 18 000 objets** en orbite, position recalculée en continu. Clic sur un objet : sa mission, ce qu'il récolte, depuis quand il est là, sa fin de mission, ses passages au-dessus de chez toi. En s'approchant, on voit le **vrai satellite en 3D** (modèles officiels de la NASA). |
-| **Système solaire** | Les 8 planètes, 11 comètes célèbres, 3 objets interstellaires et 8 astéroïdes en 3D. On peut avancer ou reculer dans le temps de ±100 ans pour voir les comètes revenir. |
-| **Ciel ce soir** | Phase de la Lune, planètes visibles et à quelle heure, prochain passage de l'ISS visible à l'œil nu. |
-| **Événements** | Éclipses de Soleil et de Lune avec compte à rebours (dont celles visibles depuis ta position), pluies d'étoiles filantes avec une note selon la gêne de la Lune, astéroïdes qui frôlent la Terre. |
-| **Caméras** | **Uniquement de vraies images** : photos des astronautes de l'ISS et son direct vidéo, la Terre entière toutes les 10 minutes (GOES), le Soleil (SDO, SOHO), et une galerie de la Lune et des planètes qui ne garde que les clichés où l'astre est vraiment bien visible (analyse d'image). |
-| **Lancements** | Les prochaines fusées dans le monde, avec compte à rebours. |
-| **Découvertes** | Les dernières exoplanètes confirmées et l'actualité spatiale. |
+**Le globe.** La Terre en haute définition, on peut zoomer jusqu'aux rues. Les satellites sont recalculés en
+continu dans le navigateur. Quand on clique sur un satellite on a sa mission, ce qu'il mesure, depuis quand il
+est là, d'où il a décollé, quand sa mission se termine, et ses prochains passages au-dessus de chez soi.
+Quand on s'approche de l'ISS, de Hubble ou de Landsat, on voit le vrai satellite en 3D (modèles officiels de la NASA).
+
+![L'ISS en 3D au-dessus de l'Amazonie](docs/screenshots/iss-3d.png)
+
+**Le dossier OSINT.** Pour chaque satellite j'ai croisé des bases de données ouvertes : qui l'a construit, combien
+il pèse, à quel programme il appartient, s'il est civil, commercial ou militaire, s'il est déclaré à l'ONU, et sur
+quelles fréquences radio il émet. Pour l'ISS on trouve même les fréquences des scaphandres russes, qu'on peut capter
+avec une simple clé SDR.
+
+**Les caméras.** Ici je voulais seulement du vrai : les dernières photos prises par les astronautes de l'ISS,
+la Terre entière photographiée toutes les 10 minutes par les satellites météo GOES, le Soleil vu par les sondes
+SDO et SOHO. Chaque image affiche sa vraie date. Et il y a une galerie de la Lune et des planètes qui ne garde
+que les photos où on voit vraiment bien l'astre (plus de détails plus bas, c'était le plus dur).
 
 <table><tr>
-<td><img src="docs/screenshots/evenements.png" alt="Éclipses et étoiles filantes"></td>
-<td><img src="docs/screenshots/ciel.png" alt="Ciel ce soir"></td>
-</tr><tr>
-<td><img src="docs/screenshots/systeme-solaire.png" alt="Système solaire en 3D"></td>
-<td><img src="docs/screenshots/fiche-satellite.png" alt="Fiche d'un satellite"></td>
+<td><img src="docs/screenshots/camera-iss.png" alt="Photos prises par l'équipage de l'ISS"></td>
+<td><img src="docs/screenshots/galerie.png" alt="Galerie de la Lune et des planètes"></td>
 </tr></table>
 
-## La science derrière
+**Le reste.** Le système solaire en 3D avec 22 comètes et astéroïdes (on peut avancer de 100 ans pour voir Halley
+revenir), le ciel du soir depuis sa position, les éclipses avec un compte à rebours, les pluies d'étoiles filantes
+notées selon la Lune, les astéroïdes qui frôlent la Terre, les prochains lancements et les dernières exoplanètes découvertes.
 
-C'est la partie qui m'a le plus appris :
+## La partie scientifique
 
-- **Position des satellites** : chaque satellite est décrit par un *TLE* (deux lignes de chiffres). L'algorithme **SGP4**
-  transforme ces chiffres en position, en tenant compte du frottement de l'atmosphère et de l'aplatissement de la Terre.
-- **Passages au-dessus de moi** : j'ai codé moi-même la chaîne de changements de repère
-  (inertiel TEME → terrestre ECEF via le temps sidéral → horizon local), puis une recherche par dichotomie
-  de l'instant exact où le satellite passe l'horizon. Un passage est « visible » si le satellite est éclairé
-  par le Soleil pendant que l'observateur est dans la nuit (modèle d'ombre cylindrique de la Terre).
-- **Comètes et astéroïdes** : résolution de l'**équation de Kepler** (méthode de Newton) pour les orbites elliptiques,
-  sa version hyperbolique pour les objets interstellaires, et l'équation de Barker pour les paraboles.
-- **Éclipses, Lune, planètes** : bibliothèque [Astronomy Engine](https://github.com/cosinekitty/astronomy) (modèle VSOP87).
-- **Taille des astéroïdes** : estimée à partir de la magnitude absolue *H* : D = 1329 / √albédo × 10^(−H/5).
+C'est la partie dont je suis le plus fier, parce qu'il a fallu comprendre avant de coder.
 
-- **Galerie** : une analyse d'image maison (bords noirs, composantes connexes, netteté par laplacien) décide si on voit vraiment bien la planète.
+- **Où sont les satellites.** Chaque satellite est décrit par deux lignes de chiffres (un « TLE »). L'algorithme SGP4
+  les transforme en position en tenant compte du frottement de l'atmosphère et du fait que la Terre n'est pas ronde.
+- **Quand passe l'ISS au-dessus de moi.** J'ai codé moi-même les changements de repère : du repère inertiel (TEME)
+  au repère terrestre (avec le temps sidéral), puis à l'horizon local. Ensuite une dichotomie trouve la seconde exacte
+  où l'ISS passe l'horizon. Pour savoir si on la voit à l'œil nu, il faut qu'elle soit éclairée par le Soleil
+  alors que l'observateur est dans la nuit, d'où un modèle de l'ombre de la Terre.
+- **Les comètes.** Résolution de l'équation de Kepler par la méthode de Newton, sa version hyperbolique pour les
+  objets qui viennent d'autres étoiles (ʻOumuamua, Borisov, 3I/ATLAS), et l'équation de Barker pour les paraboles.
+- **La taille des astéroïdes.** Estimée à partir de leur magnitude absolue : D = 1329 / √albédo × 10^(−H/5).
+- **La galerie.** Un ordinateur ne sait pas si une photo est belle. Par contre il peut mesurer si l'astre est seul,
+  entier, net et sur fond noir : bords de l'image, composantes connexes, variance du laplacien pour la netteté.
 
-Tout ça est vérifié par **54 tests automatiques** qui comparent les calculs à des événements réels
-(éclipse totale du 12 août 2026 en Espagne, éclipse de Lune du 7 septembre 2025, retour de Halley en 2061…).
+Tout ça est vérifié par 57 tests automatiques, dont certains comparent mes calculs à de vrais événements :
+l'éclipse totale du 12 août 2026 en Espagne, l'éclipse de Lune du 7 septembre 2025, le retour de Halley en 2061.
 
-## Lancer l'appli chez soi
+## Ce qui n'a pas marché
+
+Beaucoup de choses. Quelques exemples : CelesTrak m'a bloqué parce que je téléchargeais trop souvent, il manquait
+la comète de Halley parce que mon cache gardait les erreurs en mémoire pendant 24 h, les modèles 3D sortaient tout
+noirs puis tout blancs, et ma première galerie a retenu une photo d'arbre parce qu'il s'appelait « Moon Tree ».
+
+J'ai tout noté avec le problème, la cause et le correctif dans le [journal de bord](docs/JOURNAL.md). Honnêtement
+c'est le fichier qui montre le mieux comment j'ai travaillé.
+
+## L'installer chez soi
 
 ```bash
 git clone https://github.com/Parzivald1/orbitra.git
@@ -75,73 +93,59 @@ pip install -r requirements.txt
 uvicorn orbitra.main:app --reload
 ```
 
-Puis ouvrir **http://127.0.0.1:8000**. La doc de l'API se trouve sur http://127.0.0.1:8000/docs.
+Puis ouvrir http://127.0.0.1:8000 (la doc de l'API est sur `/docs`). Avec Docker :
+`docker build -t orbitra . && docker run -p 8000:8000 orbitra`.
 
-Options (fichier `.env.example`) : `CESIUM_ION_TOKEN` pour les bâtiments en 3D, `EOL_API_KEY` pour le film du trajet de l'ISS.
+Deux options facultatives dans `.env.example` : `CESIUM_ION_TOKEN` pour les bâtiments en 3D, et `EOL_API_KEY`
+pour le film du trajet de l'ISS (une clé gratuite à demander à la NASA). Sur téléphone l'appli s'installe
+comme une vraie appli depuis le navigateur.
 
-Avec Docker : `docker build -t orbitra . && docker run -p 8000:8000 orbitra`
-
-Sur téléphone, l'appli est **installable** (PWA) : « Ajouter à l'écran d'accueil » dans le navigateur.
-
-## Architecture
+## Comment c'est organisé
 
 ```
 orbitra/
-├── orbitra/              # Backend Python (FastAPI)
-│   ├── main.py           # Routes de l'API
-│   ├── astro/            # Calculs : kepler, passages, éclipses, étoiles filantes, ciel, système solaire
-│   ├── services/         # Données externes : satellites, fiches satellites, petits corps, lancements, découvertes
-│   └── data/             # Calendrier des pluies d'étoiles filantes
-├── web/                  # Frontend (HTML/CSS/JS sans framework)
-│   └── js/               # Un module par onglet + CesiumJS (globe) + Three.js (système solaire)
-├── tests/                # Tests pytest (aucun appel réseau)
-└── docs/JOURNAL.md       # Journal de bord : ce qui a marché, ce qui a planté, comment j'ai corrigé
+├── orbitra/          backend Python (FastAPI)
+│   ├── astro/        les calculs : Kepler, passages, éclipses, étoiles filantes, ciel, système solaire
+│   ├── services/     les données : satellites, OSINT, caméras, galerie, comètes, lancements…
+│   └── data/         calendrier des pluies d'étoiles filantes
+├── web/              l'interface (HTML/CSS/JS sans framework, CesiumJS et Three.js)
+├── tools/            petits scripts (recolorer le modèle 3D de l'ISS)
+├── tests/            les tests (aucun n'a besoin d'Internet)
+└── docs/             journal de bord et captures
 ```
 
-## Sources de données
+## D'où viennent les données
 
-Toutes gratuites et publiques. Merci à elles :
+Tout est gratuit et public, et je remercie les gens derrière : [CelesTrak](https://celestrak.org) pour les orbites,
+le [GCAT de Jonathan McDowell](https://planet4589.org/space/gcat/) et [SatNOGS](https://db.satnogs.org) pour l'OSINT,
+[Wikidata](https://www.wikidata.org) et Wikipédia pour les fiches, le [JPL](https://ssd.jpl.nasa.gov) pour les comètes
+et astéroïdes, [The Space Devs](https://thespacedevs.com) pour les lancements, le
+[NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu), la [Spaceflight News API](https://spaceflightnewsapi.net),
+l'[IMO](https://www.imo.net) pour les étoiles filantes, Esri pour l'imagerie du globe, les
+[modèles 3D de la NASA](https://github.com/nasa/NASA-3D-Resources), NASA GIBS, la NOAA (GOES), la NASA (SDO, EPIC,
+photos de l'ISS) et l'ESA (SOHO).
 
-| Donnée | Source |
-|---|---|
-| Orbites des satellites et débris | [CelesTrak](https://celestrak.org) (T.S. Kelso) |
-| Fiche des satellites | CelesTrak SATCAT, [Wikidata](https://www.wikidata.org), [Wikipédia](https://fr.wikipedia.org) |
-| Comètes, astéroïdes, approches | [NASA/JPL Solar System Dynamics](https://ssd.jpl.nasa.gov) |
-| Lancements | [The Space Devs](https://thespacedevs.com) (Launch Library 2) |
-| Exoplanètes | [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu) |
-| Actualité | [Spaceflight News API](https://spaceflightnewsapi.net) |
-| Pluies d'étoiles filantes | Calendrier de l'[IMO](https://www.imo.net) |
-| Imagerie satellite du globe | Esri World Imagery (Maxar, Earthstar Geographics) |
-| Modèles 3D des satellites | [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources) |
-| Images du jour des satellites | [NASA GIBS](https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api) |
-| Terre en temps réel | NOAA NESDIS STAR (GOES), NASA EPIC (DSCOVR) |
-| Soleil | NASA SDO, ESA/NASA SOHO |
-| Photos des astronautes | NASA Image Library, [Gateway to Astronaut Photography](https://eol.jsc.nasa.gov) |
+## La suite
 
-## Feuille de route
-
-- [x] v0.1 : orbite, système solaire, ciel, événements, lancements, découvertes
-- [x] v0.2 : Terre HD, satellites en 3D, vraies caméras, galerie, caméra embarquée de l'ISS
-- [ ] Cartes de pollution vues par satellite (NO₂, méthane, CO₂ mesurés par Sentinel-5P) sur le globe
-- [ ] Notifications : « l'ISS passe au-dessus de toi dans 10 minutes »
-- [ ] Applis Android et iOS (Capacitor) sur les stores
-- [ ] Version anglaise
+- [x] Orbite, système solaire, ciel, événements, lancements, découvertes
+- [x] Terre HD, satellites en 3D, caméras réelles, galerie, dossier OSINT
+- [ ] Afficher la pollution vue par satellite (NO₂, méthane, CO₂ mesurés par Sentinel-5P) : c'était l'idée de départ
+- [ ] Une notification quand l'ISS passe au-dessus de chez soi
+- [ ] Les applis Android et iOS
+- [ ] L'interface en anglais
 
 ## Contribuer
 
-Toute aide est la bienvenue : bug, idée, correction de texte, nouvelle source de données.
-Tout est expliqué dans [CONTRIBUTING.md](CONTRIBUTING.md).
+Si tu veux aider, que ce soit pour un bug, une idée ou une faute d'orthographe, tout est dans [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Comment je l'ai construit
 
-Orbitra est mon projet. Je l'ai conçu et piloté avec l'aide d'assistants IA (Claude Code, et Antigravity pour les relectures croisées),
-utilisés comme des binômes de programmation. Toutes les étapes, y compris les erreurs et leurs corrections,
-sont racontées dans le [journal de bord](docs/JOURNAL.md).
+J'ai codé ce projet avec l'aide d'assistants IA (Claude Code, et Antigravity pour relire), un peu comme un binôme.
+Moi je décidais ce qu'on faisait, je testais, je trouvais ce qui n'allait pas et je vérifiais les calculs avec de
+vrais événements. Les erreurs et la façon dont on les a corrigées sont toutes dans le journal de bord.
 
 ## Licence
 
-[MIT](LICENSE) : tu peux réutiliser, modifier et partager le code librement.
+[MIT](LICENSE) : tu peux réutiliser le code comme tu veux.
 
----
-
-<div align="center">Fait par <a href="https://github.com/Parzivald1">Parzivald1</a> · Paris</div>
+<div align="center"><sub>Parzivald1 · Paris · <a href="https://github.com/Parzivald1">@Parzivald1</a></sub></div>
