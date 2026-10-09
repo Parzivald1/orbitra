@@ -427,6 +427,7 @@ function renderCard() {
       <button class="btn" id="sat-pov" title="Reconstitution 3D à partir de l'imagerie satellite : ce n'est PAS la caméra du satellite">${icons.eye(14)} Vue 3D (reconstitution)</button>
     </div>
     <div id="sat-info"><p class="small dim">Recherche de la fiche de mission…</p></div>
+    <div id="sat-osint"></div>
     ${renderCamera(rec)}
 
     <div class="section-title">En direct</div>
@@ -445,6 +446,7 @@ function renderCard() {
     <button class="btn primary" id="sat-passes-btn">Passages au-dessus de moi</button>
     <div id="sat-passes"></div>`;
   loadInfo(rec);
+  loadOsint(rec);
   bindCamera(rec);
   card.querySelector(".card-close").onclick = () => { card.classList.add("hidden"); clearSelectionEntities(); };
   card.querySelector("#sat-follow").onclick = (e) => {
@@ -508,6 +510,36 @@ async function loadInfo(rec) {
     <p class="note small">${esc(end)}</p>
     ${wp?.url ? `<p class="small"><a href="${esc(safeUrl(wp.url))}" target="_blank" rel="noopener noreferrer">${icons.link(13)} Article Wikipédia complet</a></p>` : ""}
     <p class="sources">Sources : ${esc(d.sources.join(" · ") || "catalogue TLE")}${MODELS[rec.id] ? " · Modèle 3D : NASA" : ""}</p>`;
+}
+
+// Dossier OSINT : sources ouvertes (catalogue GCAT de J. McDowell + base radio SatNOGS)
+async function loadOsint(rec) {
+  const box = document.getElementById("sat-osint");
+  let d;
+  try { d = await api(`satellites/${encodeURIComponent(rec.id)}/osint`); } catch { return; }
+  if (selected !== rec || (!d.gcat && !d.satnogs)) return;
+  const g = d.gcat ?? {}, n = d.satnogs ?? {};
+  const dims = g.dimensions_m ?? {};
+  const size = [dims.length && `${fmtNum(dims.length, 1)} m de long`, dims.diameter && `${fmtNum(dims.diameter, 1)} m de diamètre`,
+    dims.span && `${fmtNum(dims.span, 1)} m d'envergure`].filter(Boolean).join(", ");
+  const radios = (n.radios ?? []).filter((r) => r.active).slice(0, 6);
+  box.innerHTML = `
+    <div class="section-title">Dossier OSINT (sources ouvertes)</div>
+    ${g.user?.length ? `<p class="small"><span class="tag ${g.military ? "tag-mil" : ""}">${esc(g.user.join(" + "))}</span>${g.category ? ` <span class="tag">${esc(g.category)}</span>` : ""}</p>` : ""}
+    <dl class="kv">
+      ${g.manufacturer ? `<dt>Constructeur</dt><dd>${esc(g.manufacturer)}</dd>` : ""}
+      ${g.owner ? `<dt>Exploitant</dt><dd>${esc(g.owner)}</dd>` : ""}
+      ${g.program ? `<dt>Programme</dt><dd>${esc(g.program)}</dd>` : ""}
+      ${g.bus ? `<dt>Plateforme</dt><dd>${esc(g.bus)}</dd>` : ""}
+      ${g.mass_kg ? `<dt>Masse</dt><dd>${fmtNum(g.mass_kg)} kg${g.dry_mass_kg && g.dry_mass_kg !== g.mass_kg ? ` (${fmtNum(g.dry_mass_kg)} kg à vide)` : ""}</dd>` : ""}
+      ${size ? `<dt>Dimensions</dt><dd>${esc(size)}</dd>` : ""}
+      ${g.shape ? `<dt>Forme</dt><dd>${esc(g.shape)}</dd>` : ""}
+      ${g.jcat ? `<dt>Déclaré à l'ONU</dt><dd>${g.un_registered ? esc(g.un_registration) : "non"}</dd>` : ""}
+      ${n.countries ? `<dt>Pays (SatNOGS)</dt><dd>${esc(n.countries)}</dd>` : ""}
+    </dl>
+    ${radios.length ? `<div class="small dim" style="margin-bottom:.3rem">Émetteurs radio actifs (on peut les écouter avec une antenne et un récepteur SDR) :</div>
+      <ul class="radios">${radios.map((r) => `<li><span class="mono">${fmtNum(r.mhz, 3)} MHz</span> ${esc(r.mode ?? "")} · ${esc(r.label ?? "")}</li>`).join("")}</ul>` : ""}
+    <p class="sources">${esc(d.sources.join(" · "))}${n.page ? ` · <a href="${esc(safeUrl(n.page))}" target="_blank" rel="noopener noreferrer">fiche SatNOGS</a>` : ""}</p>`;
 }
 
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);

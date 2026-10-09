@@ -19,7 +19,7 @@ from . import __version__, net
 from .astro import eclipses, meteors, passes, sky, solarsystem
 from .astro.timeutil import to_astro, to_jd, utcnow
 from .config import DEFAULT_ALT_M, DEFAULT_LAT, DEFAULT_LON, WEB_DIR
-from .services import discoveries, gallery, isscam, launches, satellites, satinfo, smallbodies, spacecams
+from .services import discoveries, gallery, isscam, launches, osint, satellites, satinfo, smallbodies, spacecams
 
 
 @asynccontextmanager
@@ -75,6 +75,14 @@ async def get_satellite_info(norad_id: str):
     if not sat:
         raise HTTPException(404, f"Satellite {norad_id} introuvable")
     return await satinfo.info(norad_id, sat["name"])
+
+
+@app.get("/api/satellites/{norad_id}/osint")
+async def get_satellite_osint(norad_id: str):
+    """Dossier OSINT : constructeur, masse, programme, usage civil ou militaire, fréquences radio."""
+    if not norad_id.isdigit():
+        raise HTTPException(422, "Numéro NORAD invalide")
+    return await osint.dossier(str(int(norad_id)))
 
 
 @app.get("/api/satellites/{norad_id}/passes")
