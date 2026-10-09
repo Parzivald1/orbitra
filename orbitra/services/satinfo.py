@@ -127,7 +127,7 @@ FAMILIES = [
     ("CSS", {"mission": "Station spatiale chinoise Tiangong.", "collects": "Expériences scientifiques en microgravité."}),
     ("ISS", {
         "mission": "Station spatiale internationale (États-Unis, Russie, Europe, Japon, Canada), habitée en permanence depuis novembre 2000.",
-        "collects": "Laboratoire en microgravité : biologie, médecine, physique des fluides, matériaux, observation de la Terre. Le Français Thomas Pesquet y a séjourné à deux reprises (2016-2017 et 2021).",
+        "collects": "Laboratoire en microgravité : biologie, médecine, physique des fluides, matériaux, observation de la Terre. Les Français Thomas Pesquet (2016-2017 et 2021) et Sophie Adenot (2026) y ont séjourné.",
         "lifetime": "Fin de vie prévue vers 2030 : elle sera désorbitée au-dessus du Pacifique par un remorqueur de SpaceX.",
     }),
     ("HST", {

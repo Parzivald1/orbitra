@@ -2,28 +2,53 @@
 // Chaque position est calculée dans le navigateur avec SGP4 (satellite.js) à partir des TLE.
 import { api, esc, safeUrl, fmtNum, fmtDate, fmtDateTime, fmtTime, loading, failed } from "./util.js";
 import { icons } from "./icons.js";
+import { MODELS, CAMERAS, markerIcon } from "./satmedia.js";
 
 const CATS = {
-  station: { label: "Stations spatiales", color: "#ffd166", size: 7 },
-  science: { label: "Science / télescopes", color: "#c77dff", size: 4 },
-  meteo: { label: "Météo", color: "#4cc9f0", size: 3.5 },
-  observation: { label: "Observation de la Terre", color: "#57d68d", size: 3 },
-  navigation: { label: "Navigation (GPS, Galileo…)", color: "#ff9f43", size: 3.5 },
-  starlink: { label: "Starlink", color: "#7f8fb5", size: 1.8 },
-  constellation: { label: "Autres constellations", color: "#9ad1d4", size: 2.2 },
-  autre: { label: "Autres satellites", color: "#dfe6f5", size: 2.2 },
-  debris: { label: "Débris", color: "#ff5c74", size: 1.6 },
+  station: { label: "Stations spatiales", color: "#ffd166", px: 15 },
+  science: { label: "Science / télescopes", color: "#c77dff", px: 11 },
+  meteo: { label: "Météo", color: "#4cc9f0", px: 10 },
+  observation: { label: "Observation de la Terre", color: "#57d68d", px: 10 },
+  navigation: { label: "Navigation (GPS, Galileo…)", color: "#ff9f43", px: 10 },
+  starlink: { label: "Starlink", color: "#9aa8c9", px: 6 },
+  constellation: { label: "Autres constellations", color: "#9ad1d4", px: 7 },
+  autre: { label: "Autres satellites", color: "#dfe6f5", px: 7 },
+  debris: { label: "Débris", color: "#ff5c74", px: 5 },
 };
 
 const MU = 398600.4418;   // constante gravitationnelle de la Terre (km³/s²)
 const R_EARTH = 6378.137; // km
 const CHUNK = 3000;       // objets recalculés par image (fluidité avant tout)
+const MODEL_RANGE = 4_000_000; // en dessous de 4 000 km de la caméra, on montre le vrai satellite
 
-let viewer, points, cursor = 0, selected = null, orbitEntity = null, labelEntity = null, observerEntity = null;
+// Imagerie satellite haute résolution (jusqu'au niveau 19 : on voit les rues et les toits)
+const ESRI = "https://services.arcgisonline.com/ArcGIS/rest/services";
+const esriLayer = (path, credit) => new Cesium.UrlTemplateImageryProvider({
+  url: `${ESRI}/${path}/MapServer/tile/{z}/{y}/{x}`,
+  maximumLevel: 19,
+  credit: credit ? new Cesium.Credit(credit, true) : undefined,
+});
+
+let viewer, billboards, cursor = 0, selected = null, appState;
+let orbitEntity = null, labelEntity = null, observerEntity = null, modelEntity = null, photoEntity = null;
+let placesLayer = null, roadsLayer = null, cameraLayer = null, buildings = null, pov = false;
 let records = [];
-let appState;
+let companions = []; // objets amarrés au satellite choisi (ex. modules de l'ISS catalogués à part)
 const visible = new Set(Object.keys(CATS).filter((c) => c !== "debris"));
 const scratch = new Cesium.Cartesian3();
+// Éclairage des modèles 3D : le rendu physique de Cesium les laisse presque noirs dans l'espace
+// (pas de lumière ambiante). On garde leurs vraies couleurs et on éclaire : Soleil + lumière ambiante.
+const MODEL_SHADER = new Cesium.CustomShader({
+  lightingModel: Cesium.LightingModel.UNLIT,
+  fragmentShaderText: `
+    void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
+      vec3 n = normalize(fsInput.attributes.normalEC);
+      float sun = abs(dot(n, normalize(czm_lightDirectionEC)));
+      material.diffuse = material.diffuse * (0.45 + 0.75 * sun);
+    }`,
+});
+
+const NEAR_FAR = new Cesium.NearFarScalar(1.0e6, 1.5, 3.5e7, 0.6); // les icônes grossissent quand on approche
 
 // Temps simulé : on peut accélérer pour voir les orbites défiler
 let speed = 1, simEpoch = Date.now(), realEpoch = Date.now();
@@ -32,16 +57,33 @@ const simNow = () => new Date(simEpoch + (Date.now() - realEpoch) * speed);
 export async function init(state) {
   appState = state;
   viewer = new Cesium.Viewer("globe", {
-    baseLayer: Cesium.ImageryLayer.fromProviderAsync(
-      Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII")),
-    ),
+    baseLayer: new Cesium.ImageryLayer(esriLayer("World_Imagery", "Imagerie © Esri, Maxar, Earthstar Geographics")),
     animation: false, timeline: false, baseLayerPicker: false, geocoder: false, homeButton: false,
     sceneModePicker: false, navigationHelpButton: false, fullscreenButton: false,
     infoBox: false, selectionIndicator: false,
+    // Rendu à la vraie résolution de l'écran (sur un écran Retina, Cesium dessine sinon en demi-résolution)
+    useBrowserRecommendedResolution: false,
+    msaaSamples: 4,
   });
-  viewer.scene.globe.enableLighting = true; // jour / nuit réels
+  const globe = viewer.scene.globe;
+  globe.enableLighting = true;            // jour / nuit réels vus de l'espace
+  // Correctif : près du sol, l'éclairage jour/nuit crée des bandes au niveau du terminateur.
+  // On le fait disparaître en dessous de 6 500 km d'altitude (là où il n'apporte plus rien).
+  globe.lightingFadeOutDistance = 6.5e6;
+  globe.lightingFadeInDistance = 9.0e6;
+  globe.maximumScreenSpaceError = 1.5;    // tuiles plus détaillées (2 par défaut)
+  globe.tileCacheSize = 1000;
+  // Correctif « textures qui bugguent » en suivant l'ISS : la caméra file à 7,6 km/s, les tuiles
+  // n'ont pas le temps d'arriver. On précharge les tuiles voisines et on en charge plus à la fois.
+  globe.preloadSiblings = true;
+  globe.loadingDescendantLimit = 60;
   viewer.clock.shouldAnimate = false;
-  points = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
+  placesLayer = viewer.imageryLayers.addImageryProvider(esriLayer("Reference/World_Boundaries_and_Places"));
+  roadsLayer = viewer.imageryLayers.addImageryProvider(esriLayer("Reference/World_Transportation"));
+  roadsLayer.show = false;
+
+  if (new URLSearchParams(location.search).has("debug")) window.orbitraViewer = viewer; // diagnostic uniquement
+  billboards = viewer.scene.primitives.add(new Cesium.BillboardCollection({ scene: viewer.scene }));
   viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(state.location.lon, state.location.lat - 20, 30_000_000) });
 
   placeObserver(state.location);
@@ -50,10 +92,12 @@ export async function init(state) {
 
   const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
   handler.setInputAction((e) => {
-    const picked = viewer.scene.pick(e.position, 14, 14);
-    if (picked?.id?.satrec) select(picked.id, false);
+    const picked = viewer.scene.pick(e.position, 16, 16);
+    const rec = picked?.id?.satrec ? picked.id : picked?.id?.orbitraRec;
+    if (rec) select(rec, false);
   }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
+  setupBuildings(); // bâtiments 3D, seulement si une clé Cesium ion est configurée
   await loadCatalog();
 }
 
@@ -63,17 +107,20 @@ async function loadCatalog() {
   const meta = document.getElementById("sat-meta");
   try {
     const data = await api("satellites");
+    const images = Object.fromEntries(Object.entries(CATS).map(([k, c]) => [k, markerIcon(c.color)]));
     for (const s of data.satellites) {
       let satrec;
       try { satrec = satellite.twoline2satrec(s.l1, s.l2); } catch { continue; }
       if (satrec.error) continue;
       const cat = CATS[s.cat] ? s.cat : "autre";
       const rec = { ...s, cat, satrec };
-      rec.point = points.add({
+      rec.bb = billboards.add({
         id: rec,
+        image: images[cat],
         position: Cesium.Cartesian3.ZERO,
-        pixelSize: CATS[cat].size,
-        color: Cesium.Color.fromCssColorString(CATS[cat].color),
+        width: CATS[cat].px,
+        height: CATS[cat].px,
+        scaleByDistance: NEAR_FAR,
         show: false,
       });
       records.push(rec);
@@ -98,13 +145,21 @@ function propagate(rec, date, gmst) {
   return { eci: p, vel: pv.velocity, ecf: satellite.eciToEcf(p, gmst) };
 }
 
+const toCartesian = (ecf, result) => Cesium.Cartesian3.fromElements(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000, result);
+
 function update(rec, date, gmst) {
-  if (!visible.has(rec.cat) && rec !== selected) { rec.point.show = false; return; }
+  if (!visible.has(rec.cat) && rec !== selected) { rec.bb.show = false; return; }
   const st = propagate(rec, date, gmst);
-  if (!st) { rec.point.show = false; return; } // objet rentré dans l'atmosphère
-  rec.point.position = Cesium.Cartesian3.fromElements(st.ecf.x * 1000, st.ecf.y * 1000, st.ecf.z * 1000, scratch);
-  rec.point.show = true;
+  if (!st) { rec.bb.show = false; return; } // objet rentré dans l'atmosphère
+  rec.bb.position = toCartesian(st.ecf, scratch);
+  rec.bb.show = true;
   rec.state = st;
+  if (rec === selected) {
+    // vitesse dans le repère terrestre (différence finie sur 1 s) : sert à orienter le modèle 3D
+    const later = new Date(+date + 1000);
+    const st2 = propagate(rec, later, satellite.gstime(later));
+    if (st2) rec.velEcf = new Cesium.Cartesian3((st2.ecf.x - st.ecf.x) * 1000, (st2.ecf.y - st.ecf.y) * 1000, (st2.ecf.z - st.ecf.z) * 1000);
+  }
 }
 
 let lastCard = 0, lastOrbit = 0;
@@ -120,6 +175,7 @@ function frame() {
   }
   if (selected) {
     update(selected, now, gmst);
+    if (pov) flyPov();
     const t = performance.now();
     if (t - lastCard > 500) { lastCard = t; renderLive(); }
     if (now - lastOrbit > 20000 || now < lastOrbit) { lastOrbit = +now; drawOrbit(); }
@@ -140,35 +196,106 @@ function orbitalElements(rec) {
   if (apogee < 2000) regime = "Orbite basse (LEO)";
   else if (e > 0.25) regime = "Orbite très elliptique (HEO)";
   else if (Math.abs(periodMin - 1436) < 15) regime = "Géostationnaire (GEO)";
-  const intl = rec.l1.slice(9, 17).trim(); // ex. 98067A = 67e lancement de 1998, objet A
-  const yy = parseInt(intl.slice(0, 2), 10);
-  const launchYear = Number.isNaN(yy) ? null : (yy < 57 ? 2000 + yy : 1900 + yy);
-  return { a, e, periodMin, apogee, perigee, regime, inclination: (s.inclo * 180) / Math.PI, intl, launchYear };
+  return { a, e, periodMin, apogee, perigee, regime, inclination: (s.inclo * 180) / Math.PI };
+}
+
+// Orientation du modèle : aligné sur sa direction de déplacement, « bas » vers la Terre
+function orientationOf(rec) {
+  return new Cesium.CallbackProperty(() => {
+    const p = rec.bb.position, v = rec.velEcf;
+    if (!v) return undefined;
+    const enu = Cesium.Transforms.eastNorthUpToFixedFrame(p);
+    const inv = Cesium.Matrix4.inverseTransformation(enu, new Cesium.Matrix4());
+    const local = Cesium.Matrix4.multiplyByPointAsVector(inv, v, new Cesium.Cartesian3());
+    const heading = Math.atan2(local.x, local.y);
+    return Cesium.Transforms.headingPitchRollQuaternion(p, new Cesium.HeadingPitchRoll(heading - Math.PI / 2, 0, Math.PI / 2));
+  }, false);
+}
+
+function setCompanions(rec) {
+  for (const c of companions) c.bb.distanceDisplayCondition = undefined;
+  companions = [];
+  if (!rec || !MODELS[rec.id] || !rec.state) return;
+  // Correctif : au démarrage, les positions des autres objets ne sont pas encore calculées
+  // (l'ISS est sélectionnée avant le premier passage de la boucle). On les calcule ici.
+  const now = simNow(), gmst = satellite.gstime(now);
+  const p = toCartesian(rec.state.ecf);
+  companions = records.filter((r) => {
+    if (r === rec) return false;
+    const st = propagate(r, now, gmst);
+    return st && Cesium.Cartesian3.distance(toCartesian(st.ecf), p) < 5000;
+  });
+  for (const c of companions) c.bb.distanceDisplayCondition = new Cesium.DistanceDisplayCondition(MODEL_RANGE, Number.MAX_VALUE);
+}
+
+function clearSelectionEntities() {
+  setCompanions(null);
+  if (placesLayer) placesLayer.show = document.getElementById("layer-places").checked;
+  if (billboards) billboards.show = true;
+  for (const e of [labelEntity, modelEntity, photoEntity]) if (e) viewer.entities.remove(e);
+  labelEntity = modelEntity = photoEntity = null;
+  viewer.trackedEntity = undefined;
+  setPov(false);
+  setCameraLayer(null);
 }
 
 function select(rec, fly = true) {
-  if (selected?.point) selected.point.pixelSize = CATS[selected.cat].size;
+  if (selected?.bb) { selected.bb.scale = 1; selected.bb.distanceDisplayCondition = undefined; }
+  clearSelectionEntities();
   selected = rec;
-  rec.point.pixelSize = 12;
-  rec.point.outlineColor = Cesium.Color.WHITE;
-  rec.point.outlineWidth = 2;
+  rec.bb.scale = 1.5;
   update(rec, simNow(), satellite.gstime(simNow()));
+  const position = new Cesium.CallbackProperty(() => rec.bb.position, false);
 
-  if (labelEntity) viewer.entities.remove(labelEntity);
   labelEntity = viewer.entities.add({
-    position: new Cesium.CallbackProperty(() => rec.point.position, false),
+    position,
     label: {
-      text: rec.name, font: "13px Space Grotesk, sans-serif", fillColor: Cesium.Color.WHITE,
-      outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-      pixelOffset: new Cesium.Cartesian2(0, -18), disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      text: rec.name, font: "600 14px Space Grotesk, sans-serif", fillColor: Cesium.Color.WHITE,
+      outlineColor: Cesium.Color.BLACK, outlineWidth: 4, style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+      pixelOffset: new Cesium.Cartesian2(0, -30), disableDepthTestDistance: Number.POSITIVE_INFINITY,
     },
   });
+
+  // Le vrai satellite : modèle 3D officiel de la NASA quand on s'approche
+  if (MODELS[rec.id]) {
+    modelEntity = viewer.entities.add({
+      position,
+      orientation: orientationOf(rec),
+      model: {
+        uri: MODELS[rec.id],
+        minimumPixelSize: 90,
+        customShader: MODEL_SHADER,
+        maximumScale: 50000,
+        distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, MODEL_RANGE),
+      },
+      viewFrom: new Cesium.Cartesian3(-180, -260, 120),
+    });
+    modelEntity.orbitraRec = rec;
+    rec.bb.distanceDisplayCondition = new Cesium.DistanceDisplayCondition(MODEL_RANGE, Number.MAX_VALUE);
+    setCompanions(rec);
+  }
+
   lastOrbit = 0;
   drawOrbit();
   renderCard();
   if (fly) {
-    viewer.camera.flyTo({ destination: Cesium.Cartesian3.multiplyByScalar(rec.point.position, 2.6, new Cesium.Cartesian3()), duration: 1.6 });
+    viewer.camera.flyTo({ destination: Cesium.Cartesian3.multiplyByScalar(rec.bb.position, 2.6, new Cesium.Cartesian3()), duration: 1.6 });
   }
+}
+
+// Sans modèle 3D : la vraie photo du satellite s'affiche quand on s'approche
+function showPhoto(rec, url) {
+  if (MODELS[rec.id] || !url || selected !== rec) return;
+  photoEntity = viewer.entities.add({
+    position: new Cesium.CallbackProperty(() => rec.bb.position, false),
+    billboard: {
+      image: url,
+      scale: 0.55,
+      pixelOffset: new Cesium.Cartesian2(0, -110),
+      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, MODEL_RANGE),
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    },
+  });
 }
 
 function drawOrbit() {
@@ -176,20 +303,114 @@ function drawOrbit() {
   const { periodMin } = orbitalElements(selected);
   const start = simNow();
   const positions = [];
-  const steps = 200;
+  const steps = 240;
   for (let k = 0; k <= steps; k++) {
     const t = new Date(+start + (k / steps) * periodMin * 60000);
     const st = propagate(selected, t, satellite.gstime(t));
-    if (st) positions.push(new Cesium.Cartesian3(st.ecf.x * 1000, st.ecf.y * 1000, st.ecf.z * 1000));
+    if (st) positions.push(toCartesian(st.ecf));
   }
   if (orbitEntity) viewer.entities.remove(orbitEntity);
   orbitEntity = viewer.entities.add({
     polyline: {
-      positions, width: 1.6,
+      positions, width: 2,
       material: new Cesium.PolylineGlowMaterialProperty({ glowPower: 0.2, color: Cesium.Color.fromCssColorString(CATS[selected.cat].color).withAlpha(0.9) }),
     },
   });
 }
+
+// ---------- Vue depuis le satellite ----------
+
+function flyPov() {
+  const p = selected.bb.position, v = selected.velEcf;
+  if (!v || Cesium.Cartesian3.equals(p, Cesium.Cartesian3.ZERO)) return;
+  const down = Cesium.Cartesian3.normalize(Cesium.Cartesian3.negate(p, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+  const fwd = Cesium.Cartesian3.normalize(v, new Cesium.Cartesian3());
+  // caméra légèrement en arrière et au-dessus : on voit la Terre défiler sous le satellite
+  const back = Cesium.Cartesian3.multiplyByScalar(fwd, -40_000, new Cesium.Cartesian3());
+  const up = Cesium.Cartesian3.multiplyByScalar(down, -15_000, new Cesium.Cartesian3());
+  const eye = Cesium.Cartesian3.add(Cesium.Cartesian3.add(p, back, new Cesium.Cartesian3()), up, new Cesium.Cartesian3());
+  const dir = Cesium.Cartesian3.normalize(Cesium.Cartesian3.add(Cesium.Cartesian3.multiplyByScalar(down, 0.8, new Cesium.Cartesian3()), fwd, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+  viewer.camera.setView({ destination: eye, orientation: { direction: dir, up: Cesium.Cartesian3.negate(down, new Cesium.Cartesian3()) } });
+}
+
+function setPov(on) {
+  const wasOn = pov;
+  pov = on;
+  viewer.scene.screenSpaceCameraController.enableInputs = !on;
+  const btn = document.getElementById("sat-pov");
+  if (btn) { btn.classList.toggle("primary", on); btn.innerHTML = on ? "Quitter la vue 3D" : `${icons.eye(14)} Vue 3D (reconstitution)`; }
+  // on ne recule la caméra que si on sortait vraiment de la vue satellite
+  if (wasOn && !on && selected?.bb) {
+    viewer.camera.flyTo({ destination: Cesium.Cartesian3.multiplyByScalar(selected.bb.position, 2.6, new Cesium.Cartesian3()), duration: 1.2 });
+  }
+}
+
+// ---------- Caméra du satellite (direct ou images du jour) ----------
+
+function setCameraLayer(provider) {
+  if (cameraLayer) { viewer.imageryLayers.remove(cameraLayer); cameraLayer = null; }
+  if (!provider) return;
+  cameraLayer = viewer.imageryLayers.addImageryProvider(provider);
+  viewer.imageryLayers.raiseToTop(placesLayer);
+}
+
+function renderCamera(rec) {
+  const cam = CAMERAS[rec.id];
+  if (!cam) return "";
+  if (cam.type === "live") {
+    return `<div class="section-title">${esc(cam.title)}</div>
+      <p class="small dim">${esc(cam.text)}</p>
+      <div id="cam-live" class="row"><button class="btn primary" id="cam-live-btn">${icons.camera(14)} Ouvrir le direct</button>
+        <button class="btn" id="cam-crew-btn">Photos de l'équipage et film du trajet</button></div>`;
+  }
+  if (cam.type === "snapshot") {
+    return `<div class="section-title">${esc(cam.title)}</div>
+      <p class="small dim">${esc(cam.text)}</p>
+      <a href="${esc(safeUrl(cam.image))}" target="_blank" rel="noopener noreferrer"><img class="sat-photo cam-shot" id="cam-shot" src="${esc(safeUrl(cam.image))}?t=${Date.now()}" alt="Dernière image réelle de ${esc(rec.name)}" loading="lazy"></a>
+      <p class="small dim" id="cam-time">Image : ${esc(cam.credit)}</p>`;
+  }
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  return `<div class="section-title">${esc(cam.title)}</div>
+    <p class="small dim">${esc(cam.text)}</p>
+    <div class="row">
+      <input type="date" id="cam-date" value="${yesterday}" max="${yesterday}" min="2012-01-01" class="date-input">
+      <button class="btn primary" id="cam-show">${icons.camera(14)} Afficher sur le globe</button>
+    </div>`;
+}
+
+function bindCamera(rec) {
+  const cam = CAMERAS[rec.id];
+  if (!cam) return;
+  if (cam.type === "live") {
+    document.getElementById("cam-crew-btn").onclick = () => document.querySelector('#tabs [data-view="cameras"]').click();
+    document.getElementById("cam-live-btn").onclick = () => {
+      document.getElementById("cam-live").innerHTML = `<div class="video"><iframe src="${esc(safeUrl(cam.embed))}" title="Direct de l'ISS"
+        allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`;
+    };
+    return;
+  }
+  if (cam.type === "snapshot") {
+    // heure exacte de la prise de vue (en-tête Last-Modified du serveur de la NOAA)
+    fetch(cam.image, { method: "HEAD" }).then((r) => {
+      const when = r.headers.get("last-modified");
+      const el = document.getElementById("cam-time");
+      if (when && el) el.textContent = `Photo prise le ${fmtDateTime(new Date(when).toISOString())} · ${cam.credit}`;
+    }).catch(() => {});
+    return;
+  }
+  const btn = document.getElementById("cam-show");
+  btn.onclick = () => {
+    if (cameraLayer) { setCameraLayer(null); btn.innerHTML = `${icons.camera(14)} Afficher sur le globe`; return; }
+    const date = document.getElementById("cam-date").value;
+    setCameraLayer(new Cesium.UrlTemplateImageryProvider({ url: cam.url(date), maximumLevel: 9, credit: new Cesium.Credit("Images : NASA EOSDIS GIBS", true) }));
+    btn.textContent = "Masquer ces images";
+    const geo = Cesium.Cartographic.fromCartesian(rec.bb.position);
+    viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromRadians(geo.longitude, geo.latitude, 9_000_000), duration: 1.5 });
+  };
+  document.getElementById("cam-date").onchange = () => { if (cameraLayer) { setCameraLayer(null); btn.click(); } };
+}
+
+// ---------- Fiche ----------
 
 function renderCard() {
   const card = document.getElementById("sat-card");
@@ -200,7 +421,13 @@ function renderCard() {
     <button class="card-close" aria-label="Fermer">×</button>
     <h2>${esc(rec.name)}</h2>
     <span class="tag" style="border-color:${CATS[rec.cat].color};color:${CATS[rec.cat].color}">${esc(CATS[rec.cat].label)}</span>
+    ${MODELS[rec.id] ? `<span class="tag">Modèle 3D NASA</span>` : ""}
+    <div class="row" style="margin-top:.7rem">
+      <button class="btn" id="sat-follow">${icons.camera(14)} ${MODELS[rec.id] ? "Voir de près" : "Suivre"}</button>
+      <button class="btn" id="sat-pov" title="Reconstitution 3D à partir de l'imagerie satellite : ce n'est PAS la caméra du satellite">${icons.eye(14)} Vue 3D (reconstitution)</button>
+    </div>
     <div id="sat-info"><p class="small dim">Recherche de la fiche de mission…</p></div>
+    ${renderCamera(rec)}
 
     <div class="section-title">En direct</div>
     <dl class="kv" id="sat-live"></dl>
@@ -215,18 +442,21 @@ function renderCard() {
       <dt>Excentricité</dt><dd>${el.e.toFixed(5)}</dd>
       <dt>N° NORAD</dt><dd>${esc(rec.id)}</dd>
     </dl>
-    <div class="row">
-      <button class="btn" id="sat-follow">${icons.camera(14)} Suivre</button>
-      <button class="btn primary" id="sat-passes-btn">Passages au-dessus de moi</button>
-    </div>
+    <button class="btn primary" id="sat-passes-btn">Passages au-dessus de moi</button>
     <div id="sat-passes"></div>`;
   loadInfo(rec);
-  card.querySelector(".card-close").onclick = () => { card.classList.add("hidden"); viewer.trackedEntity = undefined; };
+  bindCamera(rec);
+  card.querySelector(".card-close").onclick = () => { card.classList.add("hidden"); clearSelectionEntities(); };
   card.querySelector("#sat-follow").onclick = (e) => {
-    const on = viewer.trackedEntity !== labelEntity;
-    viewer.trackedEntity = on ? labelEntity : undefined;
-    e.target.classList.toggle("primary", on);
+    const target = modelEntity ?? labelEntity;
+    const on = viewer.trackedEntity !== target;
+    setPov(false);
+    viewer.trackedEntity = on ? target : undefined;
+    placesLayer.show = on ? false : document.getElementById("layer-places").checked;
+    billboards.show = !on; // vue rapprochée : les 18 000 autres points disparaissent
+    e.currentTarget.classList.toggle("primary", on);
   };
+  card.querySelector("#sat-pov").onclick = () => { viewer.trackedEntity = undefined; setPov(!pov); };
   card.querySelector("#sat-passes-btn").onclick = () => loadPasses(rec);
   renderLive();
 }
@@ -244,6 +474,7 @@ async function loadInfo(rec) {
   if (selected !== rec) return; // l'utilisateur a cliqué ailleurs entre-temps
   const wp = d.wikipedia, wd = d.wikidata, fam = d.family;
   const photo = wp?.thumbnail;
+  showPhoto(rec, photo);
   const active = d.status === "En service" || d.status === "Mission prolongée";
   const end = d.decay_date
     ? `Rentré dans l'atmosphère le ${fmtDate(d.decay_date)}`
@@ -276,7 +507,7 @@ async function loadInfo(rec) {
     <div class="section-title">Fin de mission</div>
     <p class="note small">${esc(end)}</p>
     ${wp?.url ? `<p class="small"><a href="${esc(safeUrl(wp.url))}" target="_blank" rel="noopener noreferrer">${icons.link(13)} Article Wikipédia complet</a></p>` : ""}
-    <p class="sources">Sources : ${esc(d.sources.join(" · ") || "catalogue TLE")}</p>`;
+    <p class="sources">Sources : ${esc(d.sources.join(" · ") || "catalogue TLE")}${MODELS[rec.id] ? " · Modèle 3D : NASA" : ""}</p>`;
 }
 
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -311,6 +542,32 @@ async function loadPasses(rec) {
   } catch (err) { failed(box, err); }
 }
 
+// ---------- Bâtiments 3D (optionnel) ----------
+
+// Google Photorealistic 3D Tiles via Cesium ion : demande une clé gratuite (variable CESIUM_ION_TOKEN côté serveur).
+async function setupBuildings() {
+  let config;
+  try { config = await api("config"); } catch { return; }
+  if (!config.cesium_ion_token) return;
+  Cesium.Ion.defaultAccessToken = config.cesium_ion_token;
+  const toggle = document.getElementById("layer-buildings");
+  toggle.closest("label").classList.remove("hidden");
+  toggle.onchange = async () => {
+    if (toggle.checked && !buildings) {
+      try {
+        buildings = await Cesium.createGooglePhotorealistic3DTileset();
+        viewer.scene.primitives.add(buildings);
+      } catch (err) {
+        toggle.checked = false;
+        alert(`Bâtiments 3D indisponibles : ${err.message}`);
+        return;
+      }
+    }
+    if (buildings) buildings.show = toggle.checked;
+    viewer.scene.globe.show = !toggle.checked; // les tuiles 3D remplacent le globe
+  };
+}
+
 // ---------- Interface ----------
 
 function renderCategories(counts) {
@@ -321,7 +578,7 @@ function renderCategories(counts) {
   box.onchange = (e) => {
     const cat = e.target.dataset.cat;
     if (e.target.checked) visible.add(cat); else visible.delete(cat);
-    if (!e.target.checked) for (const r of records) if (r.cat === cat && r !== selected) r.point.show = false;
+    if (!e.target.checked) for (const r of records) if (r.cat === cat && r !== selected) r.bb.show = false;
   };
 }
 
@@ -351,13 +608,29 @@ function bindControls() {
       for (const o of document.querySelectorAll("#orbit-panel [data-speed]")) o.classList.toggle("active", +o.dataset.speed === (s || 1));
     });
   }
+
+  document.getElementById("layer-places").onchange = (e) => { placesLayer.show = e.target.checked; };
+  document.getElementById("layer-roads").onchange = (e) => { roadsLayer.show = e.target.checked; };
+  document.getElementById("layer-light").onchange = (e) => { viewer.scene.globe.enableLighting = e.target.checked; };
+  document.getElementById("zoom-home").onclick = () => {
+    setPov(false);
+    viewer.trackedEntity = undefined;
+    const { lon, lat } = appState.location;
+    viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(lon, lat - 0.012, 1800), orientation: { pitch: Cesium.Math.toRadians(-50) }, duration: 3 });
+  };
+  document.getElementById("zoom-space").onclick = () => {
+    setPov(false);
+    viewer.trackedEntity = undefined;
+    const { lon, lat } = appState.location;
+    viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(lon, lat - 20, 30_000_000), duration: 2.5 });
+  };
 }
 
 function placeObserver(loc) {
   if (observerEntity) viewer.entities.remove(observerEntity);
   observerEntity = viewer.entities.add({
     position: Cesium.Cartesian3.fromDegrees(loc.lon, loc.lat),
-    point: { pixelSize: 8, color: Cesium.Color.fromCssColorString("#6ea8ff"), outlineColor: Cesium.Color.WHITE, outlineWidth: 2 },
+    point: { pixelSize: 9, color: Cesium.Color.fromCssColorString("#6ea8ff"), outlineColor: Cesium.Color.WHITE, outlineWidth: 2, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND },
     label: { text: "Vous", font: "12px Space Grotesk, sans-serif", pixelOffset: new Cesium.Cartesian2(0, -16), fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE },
   });
 }
